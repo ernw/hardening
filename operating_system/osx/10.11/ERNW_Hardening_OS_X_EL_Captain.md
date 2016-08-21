@@ -198,6 +198,9 @@ It is recommended to enable FileVault to use full disk encryption on your device
 * System Preferences → Security & Privacy → FileVault
 * Enable FileVault
 
+To remove the encryption key from memory and remove power from memory when hibernating issue the following command:
+> sudo pmset -a destroyfvkeyonstandby 1 hibernatemode 25 
+
 ---
 
 ##  Firewall
