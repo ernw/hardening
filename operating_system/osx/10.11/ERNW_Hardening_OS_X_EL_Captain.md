@@ -46,7 +46,7 @@
  1. [RansomWhere?](#RansomWhere?)
  1. [Dylib Hijack Scanner](#dylib-hijack-scanner)
  1. [Lynis](#Lynis)
-1. [Apendix: List of Services](#apendix-list-of-services)
+1. [Appendix: List of Services](#appendix-list-of-services)
 
 
 
@@ -480,7 +480,7 @@ https://cisofy.com/lynis/
 ---
 
 
-# Apendix List of Services
+# Appendix List of Services
 
 The following table lists service files and the corresponding
 functionality that should be disabled/must not be enabled unless
