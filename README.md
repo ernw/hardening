@@ -21,3 +21,6 @@ Feel free to contact us for questions, additions, spotted mistakes, or -- you na
 The following incomplete list contains several other high quality hardening resources:
 * http://dev-sec.io/
 * https://benchmarks.cisecurity.org/downloads/benchmarks/
+* https://www.owasp.org/index.php/Secure_Configuration_Guide
+* https://bettercrypto.org/static/applied-crypto-hardening.pdf
+* https://www.team-cymru.org/templates.html
