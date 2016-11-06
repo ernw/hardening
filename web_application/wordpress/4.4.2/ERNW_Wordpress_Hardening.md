@@ -32,6 +32,8 @@
 
 [2.14 Disable the plugin and theme editor ](#disable-the-plugin-and-theme-editor-optional)
 
+[2.15 Disable XML-RPC](disable-xml-rpc-optional)
+
 # Introduction
 ERNW has compiled the most relevant settings for the Wordpress version 4.4.2 into this checklist.
 While there is a significant amount of controls that can be applied, this document is supposed to provide a solid baseof hardening measures.
@@ -105,13 +107,15 @@ Another layer of protection is added by limiting the administrative access by IP
 1. Create a .htaccess file in the /wp-admin/ folder
 2. Insert the following lines including your static internal IP address into the .htaccess file:
 
-    order deny,allow
-    deny from all
-    allow from xx.xx.xx.xx // ( your static internal IP)
+> order deny,allow
+
+> deny from all
+
+> allow from xx.xx.xx.xx // ( your static internal IP)
 
 ## Hardening the PHP settings (Mandatory)
-The php.ini file configurates how the php environment might behave under certain circumstances.
-The following options are safe to be disabled in a production environment without breaking further functionality while improving the security posture of the Wordpress installation:   Mandatory
+The php.ini file configures how the php environment might behave under certain circumstances.
+The following options are safe to be disabled in a production environment without breaking further functionality while improving the security posture of the Wordpress installation:
 
 - display\_errors = Off
 - expose\_php = Off
@@ -119,10 +123,12 @@ The following options are safe to be disabled in a production environment withou
 - error\_log = /var/log/phperror.log
 - disable\_functions=popen,exec,system,passthru,proc\_open,shell\_exec,show\_source,php
 
-## Change the Wordpress database prefix (Mandatory)
+Note: This is of course no full PHP hardening. For a comprehensive overview, refer to https://github.com/sektioneins/pcc
+
+## Change the Wordpress database prefix (Optional)
 Wordpress initializes the database scheme with its default naming scheme using the prefix wp\_ for all tables.
 As attackers are aware of this default prefix they prepare their SQL injection attempts to comply with this scheme.
-Changing the prefix makes it harder for an attacker to identify the database naming scheme.   Mandatory
+Changing the prefix makes it slightly harder for an attacker to identify the database naming scheme.  
 To change the prefix perform the following steps:
 
 1. Perform a database backup directly through the database client instead of the Wordpress admin
@@ -147,7 +153,7 @@ To do this log in as an administrator, go to Settings → General and make sure 
 Both the readme.html and install.php files are relicts from the Wordpress installation process not needed to reside on a productive system.
 It is therefore recommended to delete both files.   Recommended
 
-## Move the wp-config.php file above the Wordpress root folder (Mandatory)
+## Move the wp-config.php file above the Wordpress root folder (Optional)
 As the wp-config.php contains sensitive information about the configuration of the Wordpress installation it is recommended to move this file to a non-public html folder.   Mandatory
 Wordpress looks up this file in the Wordpress root folder. If the system cannot find the wp-config.php it looks in the directory above the Wordpress root.
 Moving the wp-config.php to a non-public folder means it will not be accessable from the Internet.
@@ -158,3 +164,7 @@ This prevents users and attackers having access to a privileged user account fro
 Open the wp-config.php and add the following line:
 
     define('DISALLOW_FILE_EDIT', true);
+
+## Disable XML-RPC (Optional)
+
+If you do not use the functionality provided by the WordPress XML-RPC service (such as pingbacks, refer also [here](https://codex.wordpress.org/XML-RPC_Support)), it should be disabled. There are different ways to achieve that, you should select the most suitable one for you. There is no simple configuration option in recent WordPress versions, hence this setting is not mandatory.

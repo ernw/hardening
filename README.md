@@ -24,3 +24,4 @@ The following incomplete list contains several other high quality hardening reso
 * https://www.owasp.org/index.php/Secure_Configuration_Guide
 * https://bettercrypto.org/static/applied-crypto-hardening.pdf
 * https://www.team-cymru.org/templates.html
+* https://github.com/sektioneins/pcc
