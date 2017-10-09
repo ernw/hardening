@@ -126,7 +126,7 @@ Always disable everything for Guest Accounts and deactivate the Guest Account.
 
 ## Restrict Sudoers file
 
-To restrict the grace period and limit it to individual ttys. Edit /etc/sudoers and add the following:
+To restrict the grace period and limit it to individual ttys. Edit /etc/sudoers with the ```visudo``` command and add the following:
 
 ```
 Defaults timestamp_timeout=0
