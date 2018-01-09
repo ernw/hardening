@@ -63,9 +63,7 @@ Important: This Guide will force you to Disable SIP (System Integrity Protection
 
 OS X will always force you to create a new Account. Even if you run on an Admin Account, you won´t have the same rights as “root”.
 
-This is what OS X calls System Integrity Protection (further in short SIP). SIP will deny any Change on System files like /etc/hosts.
-
-> __!__ But there is local per User hosts file "/private/etc/hosts"
+This is what OS X calls System Integrity Protection (further in short SIP). SIP will deny any Change on System directories like /System.
 
 ---
 
