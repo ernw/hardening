@@ -255,7 +255,7 @@ set autologout=15
 
 ##	Remove Unnecessary SUID/GUID Files (Mandatory)
 * To find all **SUID** and **GUID** files on the system, run the following command:
-> find / -perm -4000 -o -perm -2000 -print
+> find / -perm /u=s,g=s
 
 * Search these files for the SUID bit. If such a bit is found, and the file does not need it, remove it with the following command:
 > chmod -s /path/to/file
