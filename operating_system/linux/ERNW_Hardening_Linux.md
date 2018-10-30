@@ -28,7 +28,7 @@
   - [Disable Core Dumps (Mandatory)](#disable-core-dumps-mandatory)
   - [Enforce Strict Permissions To the /root Path (Mandatory)](#enforce-strict-permissions-to-the-root-path-mandatory)
   - [Enforce Strict Permissions To the /home Path (Mandatory)](#enforce-strict-permissions-to-the-home-path-mandatory)
-  - [Properly Place Home Directories (<OPTGROUP></OPTGROUP>tional)](#properly-place-home-directories-optgroupoptgrouptional)
+  - [Properly Place Home Directories (Optional)](#properly-place-home-directories-optgroupoptgrouptional)
   - [Ensure Mail Distribution to Active Mail Accounts (Mandatory)](#ensure-mail-distribution-to-active-mail-accounts-mandatory)
   - [Remove Unnecessary Software Packages (Mandatory)](#remove-unnecessary-software-packages-mandatory)
   - [Regularly Check for World Readable Directories and Files (Mandatory)](#regularly-check-for-world-readable-directories-and-files-mandatory)
