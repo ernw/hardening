@@ -61,7 +61,7 @@
  
 # Introduction
 
-This document is supposed to provide a solid base of hardening measures for Mac OS 10.14  to enhance the system security and still remaining commonly usable. 
+This document provides a base hardening guideline for Mac OS 10.14  to enhance the system security and still remaining commonly usable. 
 Settings which might have severe impact on the functionality of the operating system and need a lot of further testing are not part of this checklist or marked as optional. 
 We have marked each recommended setting in this checklist either with “mandatory” or “optional” to make a clear statement, which setting is a MUST (mandatory) or a SHOULD (optional) from our point of view. “Optional” also means that we recommend applying this setting, but there may be required functionality on the system that will become unavailable once the setting is applied. Further, we will mark the “Optional” setting if  it has a big impact on the user experience.
 Important: This guide will force you to Disable SIP [1] (System Integrity Protection) a few times. After the hardening is done, please make sure you enable SIP again.
@@ -78,14 +78,14 @@ This chapter describes general approaches for the Mac OS system.
 
 ## Secure Boot
 
-The new 2018 MacBook models support secure boot through their newly included T2 chip inside the ```TouchBar``` including the Secure Enclave. To check if Secure Boot is enabled, the MacBook needs to be booted with the ```cmd+r``` key. After entering the Firmware Password, it is possible to access the “Startup Security Utility” in the Menu bar. If the MacBook contains a T2 Chip (```TouchBar```) it is possible to see the options for “Secure Boot” and “External Boot”. It is highly recommended to have “Secure Boot” on Full Security and “External Boot” on Disallow booting from external media.
+The new 2018 MacBook models support secure boot through their newly included T2 chip inside the ```TouchBar``` including the Secure Enclave. To check if Secure Boot is enabled, the MacBook needs to be booted with the ```cmd+r``` key. After entering the Firmware Password, it is possible to access the “Startup Security Utility” in the Menu bar. If the MacBook contains a T2 Chip (```TouchBar```), it is possible to see the options for “Secure Boot” and “External Boot”. It is highly recommended to have “Secure Boot” on Full Security and “External Boot” on Disallow booting from external media.
 
 ---
 
 ## End-Point Protection
 
-Per default, Mac OS has already protection mechanisms such as XProtect (Malware detection), Secure Boot, Codesigning validation, Sandboxed Application and System Integrity Protection in place. Further, if an MDM is enabled (e.g. Mac OS Server) The devices can be managed through different policies and configured.
-If it is required to have additional end-point protection tools installed, it should be evaluated if available tools inside the company support Mac OS devices. Otherwise, such managed software can be evaluated. 
+Per default, Mac OS has already protection mechanisms such as XProtect (Malware detection), Secure Boot, Codesigning validation, Sandboxed Application and System Integrity Protection in place. Further, if an MDM is enabled (e.g. Mac OS Server), the devices can be configured and managed through different policies.
+If it is required to have additional end-point protection tools installed, it should be evaluated if already used tools support Mac OS devices. Otherwise, such managed software can be evaluated. 
  
 ---
 
@@ -94,9 +94,9 @@ If it is required to have additional end-point protection tools installed, it sh
 
 The audit framework of MacOS can be granularly configured. The aggregated logs can be viewed with the application ```/Applications/Utilities/Console.app.```. 
 MacOS per default supports sending logs over UDP (Port 514) through the syslogd daemon. However, it is not recommended to use this feature due to the lack of support for TLS/SSL and will be soon deprecated by Apple. 
-If your company does not possess a SIEM which supports Mac OS with agents it is recommended to only aggregate logs locally from the MacBook and preventing sending unencrypted logs over the wire.
-It is possible to obtain such logs in a sane and secure way using the log utility provided within the Mac OS. A requirement is that the receiving end of log aggregation server has a TCP port open which supports TLS/SSL. 
-The following command on the MacBook will send for example every failed sudo try to the log server over an encrypted channel:
+If your company does not possess a SIEM which supports Mac OS with agents, it is recommended to only aggregate logs locally from the MacBook and prevent sending unencrypted logs over the wire.
+It is possible to obtain such logs in a sane and secure way using the log utility provided by Mac OS. A requirement is that the receiving end of a log aggregation server has a TCP port open which supports TLS/SSL. 
+The following command on the MacBook will for example send every failed sudo try to the log server over an encrypted channel:
 
 ```
 log stream --style syslog --predicate 'process == "sudo" and eventMessage contains "incorrect password"' | openssl s_client -host <RemoteServer> -port <Port>
@@ -114,7 +114,7 @@ Further, it should be evaluated which filters should be used for the log aggrega
 
 ## Mobile Device Management
 
-Connecting the MacBook with a Mobile Device Management System (MDM) like the Mac OS Server it is possible to force the operating system to follow provided policies. Further, deploying certificates and connection towards an Active Directory is possible over MDM solutions. 
+Connecting the MacBook with a Mobile Device Management System (MDM) like the Mac OS Server, it is possible to force the operating system to follow provided policies. Further, deploying certificates and connection towards an Active Directory is possible over MDM solutions. 
 
 ---
 
@@ -129,13 +129,13 @@ This is what MAC OS calls System Integrity Protection (further in short SIP). SI
 
 ## Users Privilege Separation
 
-It is suggested to use different accounts for administration and daily activities. Create an account with admin privileges for special tasks and maintenance and a normal user for your daily use to avoid fast elevation of privileges for Attackers.
+It is suggested to use different accounts for administration and daily activities. Create an account with admin privileges for special tasks and maintenance and a normal user for your daily use to avoid fast elevation of privileges by attackers.
 
 ---
 
 ## Ensure Password Security
 
-Choosing a strong Password is Mandatory for the System. In case there is currently no Password Policy in place the following Policy will give you a little hint for the minimum requirements.
+Choosing a strong Password is Mandatory for the System. In case there is currently no Password Policy in place, the following Policy shall be used as the minimum requirements:
 
 * Minimum password length of at least 8 characters
 * Password must consist of at least one character of each character group (letters, capital letters, numbers, special characters)
@@ -157,8 +157,8 @@ pwpolicy -u -setpolicy "minChars=8 requiresAlpha=1 requiresNumeric=1 maxMinutesU
 
 ## Two Factor Authentication (Optional)
 
-Since MAC OS 10.11 and IOS 9, these Devices have a built in two factor authentication mechanism which will secure your AppleID. If you want to access anything which will require you to login to your AppleID, Numbers for the Authentication will be pushed on another Device with either MAC OS 10.11 or IOS 9. This can affect your MAC OS installation, since it is possible to reset the password of the device from your AppleID.
-If you are actively using your AppleID for various tasks it is recommended to use Two Factor Authentication.
+Since MAC OS 10.11 and IOS 9, these Apple Devices have a built-in two factor authentication mechanism which will secure your AppleID. If you want to access anything that requires a login to your AppleID, Numbers for the Authentication will be pushed on another Device with either MAC OS 10.11 or IOS 9. This can affect your MAC OS installation, since it is possible to reset the password of the device from your AppleID.
+If you are actively using your AppleID for various tasks, it is recommended to use Two Factor Authentication.
 
 ---
 
@@ -234,7 +234,7 @@ It is recommended to always have auto updates enabled to deliver latest security
 $ defaults read /Library/Preferences/com.apple.SoftwareUpdate AutomaticallyInstallMacOSUpdates
 1
 ```
-If automatic updates are enabled the return value should be 1 as displayed in the output. If the setting is not present it can be manually set with the following command:
+If automatic updates are enabled, the return value should be 1 as displayed in the output. If the setting is not present, it can be manually set using the following command:
 ```
 sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticallyInstallMacOSUpdates -int 1
 ```
@@ -266,7 +266,7 @@ vm.cs_force_hard=1  # Fail operation if invalidated
 vm.cs_all_vnodes=1  # Apply on all Vnodes
 vm.cs_enforcement=1 # Globally apply code signing enforcement
 ```
-Note: This change will require to disable System Integrity Protection (Remember to Enable it after Hardening). On a fresh installed system it is possible that ```sysctl.conf``` is not existent. If so you can create it and reboot the system. 
+Note: This change will require to disable System Integrity Protection (Remember to Enable it after Hardening). On a fresh installed system it is possible that ```sysctl.conf``` is not existent. If so, you can create it and reboot the system. 
 
 ---
 
@@ -292,7 +292,7 @@ sudo defaults write NSGlobalDomain NSDocumentSaveNewDocumentsToCloud -bool false
 
 ## Disable Diagnostics (Mandatory)
 
-To avoid sending data to Apple or App Developers disable the following:
+To avoid sending data to Apple or App Developers, disable the following:
 
 * System Preferences → Security & Privacy → Privacy → Diagnostics & Usage
 * Uncheck “Send diagnostic & usage data to Apple”
@@ -312,20 +312,20 @@ Apples Handoff is a feature to keep your workspaces in sync but it does require 
 
 ## FileVault (Mandatory)
 
-It is recommended to enable FileVault to use full disk encryption on your device. It should be already enabled by default. However, turning on FileVault after installing macOS is more secure to a better seed from the (Pseudo Random Number Generator)
+It is recommended to enable FileVault to use full disk encryption on your device. It should be already enabled by default. However, turning on FileVault after installing macOS is more secure because of a "better" (more random) seed from the (Pseudo Random Number Generator)
 
 * System Preferences → Security & Privacy → FileVault
 * Enable FileVault
 
 Optional:
 
-To remove the encryption key from memory and remove power from memory when hibernating issue the following command:
+To remove the encryption key from memory and remove power from memory when hibernating, issue the following command:
 
 ```
 sudo pmset -a destroyfvkeyonstandby 1 hibernatemode 25
 ```
 
-Note: This might be an impact to the user experience since the disk has to be decrypted on every lid open. This can take up to 10 additional seconds for booting.
+Note: This might have an impact to the user experience since the disk has to be decrypted on every lid open. This can take up to 10 additional seconds for booting.
 In case of a highly secured MacBook with destroying the FileVault key on standby other power settings can be applied to safe energy (Usually the MacBook wakes up and checks different things like Backup etc. However, when destroying the FileVault key on standby it cannot perform these operations). The preferred settings in this mode are the following:
 
 ```
@@ -368,7 +368,7 @@ It is recommended to automatically lock your screen when inactive.
 
 ## Filename Extensions (Mandatory)
 
-To be always clear what sort of file you´re processing. It is recommended to turn on Filename extensions.
+To be always clear what sort of file you´re processing, it is recommended to turn on displaying Filename extensions.
 * Open Finder → Settings → Advanced
 * Set "Show all filename extensions"
 
@@ -376,7 +376,7 @@ To be always clear what sort of file you´re processing. It is recommended to tu
 
 ## Prevent Safari from Opening Known File Types (Mandatory)
 
-If you are using Safari as your main Browser it is recommended to prevent Safari from opening known files after downloading.
+If you are using Safari as your main Browser, it is recommended to prevent Safari from opening known files after downloading.
 
 * Open Safari → Preferences → General
 * Unset "Open safe files after downloading"
@@ -385,7 +385,7 @@ If you are using Safari as your main Browser it is recommended to prevent Safari
 
 ## Set Strict Global Umask (Optional)
 
-The Strict Global Umask defaults the Permission of any File or Directory which is created by a user. You can adjust the Global Umask with the following command:
+The Strict Global Umask defaults the Permission of any File or Directory that is created by a user in the future. You can adjust the Global Umask with the following command:
 
 ```
 sudo launchctl config system umask 027
@@ -428,7 +428,7 @@ Note: Deactivating Bluetooth will prevent any peripherals like a Bluetooth keybo
 
 ## Firmware Password (Mandatory)
 
-To prevent Single User Mode and bootable devices it is recommended to set a sufficient complex Firmware Password.
+To prevent Single User Mode and bootable devices, it is recommended to set a sufficient complex Firmware Password.
 
 * Boot your Mac into Recovery Mode by pressing Command + R as your Mac is booting.
 * Select Utilities → Firmware Password Utility
@@ -458,13 +458,13 @@ chmod g-s #file
 
 ## Disable Core Dumps (Mandatory)
 
-To limit Kernel Information leaks disable the core dumping capability. Edit the following line in ```/etc/sysctl.conf:```
+To limit Kernel Information leaks, disable the core dumping capability. Edit the following line in ```/etc/sysctl.conf:```
 
 ```
 kern.coredump=0
 ```
 
-Note: This change will require to disable System Integrity Protection (Remember to Enable it after Hardening). On a fresh installed system it is possible that ```sysctl.conf``` is not existent. If so you can create it and reboot the system. 
+Note: This change will require to disable System Integrity Protection (Remember to Enable it after Hardening). On a freshly installed system it is possible that ```sysctl.conf``` is not existent. If so you can create it and reboot the system. 
 
 Since Kerneldumps can be helpful for debugging you can enable it temporarily with:
 
@@ -477,13 +477,13 @@ sudo sysctl -w kern.coredump=1
 
 In some cases it is needed to disable inserting any mass storage to the system. This can be achieved either by deleting the KEXT driver or using enterprise MDM tools to deny such usages.
 
-To completely disable USB Mass storage it is possible to delete the KEXT driver ```IOUSBMassStorageClass.kext``` in ```/System/Library/Extensions``` (SIP has to be disabled). It is also possible to completely disable Bluetooth when deleting ```IOBlueToothFamily``` in the previous mentioned folder. After deleting the kext drivers it is needed to perform the following command on the directory to rebuild the kernelcache:
+To completely disable USB Mass storage it is possible to delete the KEXT driver ```IOUSBMassStorageClass.kext``` in ```/System/Library/Extensions``` (SIP has to be disabled). It is also possible to completely disable Bluetooth by deleting ```IOBlueToothFamily``` in the previous mentioned folder. After deleting the kext drivers, it is needed to perform the following command on the directory to rebuild the kernelcache:
 
 ```
 touch /System/Library/Extensions
 ```
 
-Note: This can affect usability of the MacBook due to no mass storage can be inserted. However, USB Keyboards will still work. On a major version update this might be reverted again and it can be possible to use USB again.
+Note: This can affect usability of the MacBook due to no mass storage can be inserted. However, USB Keyboards will still work. On a major version update, this might be reverted again and it can be possible to use USB again (keep in mind to check this hardening measure after a major Mac OS update).
 
 Further, some commercial software (https://www.endpointprotector.com/products/endpoint-protector) can perform similar port blocking but have not been tested by the author yet. 
 
@@ -493,7 +493,7 @@ Further, some commercial software (https://www.endpointprotector.com/products/en
 
 ## Advanced Firewall (Optional)
 
-It is recommended to monitor more precise on Application Traffic. Such Software Firewalls can generate their own rulesets for different Locations and Networks.
+It is recommended to monitor more precise on Application Traffic. Software Firewalls can generate their own rulesets for different Locations and Networks.
 We can recommend a more Advanced Firewall like “Little Snitch”, “Radio Silence” and “Handoff” which are full blown local Firewall (25-35€). If you are looking for a free alternative you can look at the lite version of “Murus”.
 
 * https://www.obdev.at/products/littlesnitch/index-de.html
@@ -560,7 +560,7 @@ Sharing is disabled on default. You can verify this here:
 
 ## Enable Network Time Synchronization via NTP (Mandatory)
 
-To secure your clock is always correct and not corrupted for e.g Log-Files. Use the following Commands:
+To ensure that your clock is always correct and not corrupted (e.g. important for Log-Files), use the following Commands:
 
 ```
 sudo systemsetup -setnetworktimeserver "time.euro.apple.com"
@@ -596,7 +596,7 @@ To limit tracking of the device disable the following:
 
 ## Tracking Services (Mandatory)
 
-It is recommended to disable the Tracking Services. If you decide to use the Tracking Services it is possible to disable it just for the Spotlight Suggestions.
+It is recommended to disable the Tracking Services. If you decide to use the Tracking Services, it is possible to disable it just for the Spotlight Suggestions.
 
 * *System Preferences → Security & Privacy → Privacy → Location Services
 * Select "System Services" → Details
