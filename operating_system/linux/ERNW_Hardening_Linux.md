@@ -190,7 +190,7 @@ This has to be done for all default service accounts.
 Sensitive data that is not in active use (e.g. copies of configuration files) must not be stored on the system. If sensitive data must be stored for operational reasons, store this data in encrypted form. This can for example be done in the following ways (where of course the password should be stored in a central password vault):
 
 * Use **zip** and set a password to encrypt the zip file:
-> zip -e target.zip folder_to_encrypt
+> zip --encrypt --recurse-paths target.zip folder_to_encrypt
 
 * Create an archive file and encrypt its contents with **openssl**. This can be done with the following command:
 > tar cz folder_to_encrypt | openssl enc -aes-256-cbc -e > out.tar.gz.enc
