@@ -90,7 +90,10 @@ upper case =1
 number = 1
 passwords to remember (password history) = 5
 ```
-To enforce this policy, add the following lines to the file **/etc/pam.d/common-password**:
+To enforce this policy, add the following lines to the file:
+Debian/Ubuntu: **/etc/pam.d/common-password**:
+Red Hat 6+ / CentOS 6+/ SuSE: **/etc/pam.d/password-auth-ac**:
+Solaris 8-10 /AIX 6+: **/etc/pam.conf** (Has service name as additional first field):
 ```
 password  required    pam_cracklib.so dcredit=-1 ucredit=-1 lcredit=-1 minlen=8 retry=5
 password  required    pam_pwhistory.so use_authtok remember=3 retry=5
@@ -101,13 +104,16 @@ password  required    pam_unix2.so use_authtok
 ---
 
 ## Configure Account Lockout Policies (Mandatory)
-The file **/etc/pam.d/common-auth** is used for configuring account lockout policies. We present below example lockout policies, that is, example entries in the **common-auth** file:
+The file PAM Auth **/etc/pam.d/common-auth** is used for configuring account lockout policies. We present below example lockout policies, that is, example entries in the **common-auth** file:
+Debian/Ubuntu: **/etc/pam.d/common-auth**
+Red Hat 6+ / CentOS 6+ / SuSE: **/etc/pam.d/password-auth-ac**:
 ```
 auth required pam_tally.so onerr=fail no_magic_root unlock_time=180
 account required pam_tally.so per_user deny=5 no_magic_root reset
 ```
 The first entry configures the system to count failed logins, or failed **su** attempts, on a user basis and sets the account lock timer to 30 minutes. The second entry configures the system to lock accounts after 5 failed logins, or failed **su** attempts (see the "deny" parameter).
 
+pam_tally2.so, and pam_faillock.so also implement this feature.
 ---
 
 ## Enable Password Aging (Mandatory)
