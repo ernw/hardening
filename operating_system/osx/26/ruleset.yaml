@@ -11,6 +11,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- boot
 checksuites:
 - id: external-boot-disallowed-check
   description: Ensures booting from external media is disallowed to prevent bypassing local security controls and unauthorized
@@ -80,6 +82,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- boot
 checksuites:
 - id: sip-enabled-check
   description: Verifies that System Integrity Protection (SIP) is enabled. SIP restricts the root user and prevents modification
@@ -104,6 +108,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- boot
 checksuites:
 - id: signed-system-volume-writable-check
   description: 'Confirms that the System Volume is read-only (''Writable: No''). This is a core component of the Signed System
@@ -131,6 +137,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- boot
 checksuites:
 - id: authenticated-root-enabled-check
   description: Verifies that the Authenticated Root feature (part of SSV) is enabled. This ensures the system only boots from
@@ -154,6 +162,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- system
 checksuites:
 - id: gatekeeper-assessments-enabled
   description: Ensures that Gatekeeper assessments are enabled. Gatekeeper enforces security policies for downloaded applications,
@@ -192,6 +202,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- boot
 checksuites:
 - id: firmware-password-enabled
   description: Checks if a firmware password is set, which prevents unauthorized users from booting from any internal or external
@@ -217,6 +229,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- filesystem
 checksuites:
 - id: filevault-disk-encryption-status
   description: Verifies that FileVault is enabled, ensuring full-disk encryption of the startup volume. This protects data
@@ -268,6 +282,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- privacy
 checksuites:
 - id: crashreporter-auto-submit-disabled
   description: Ensures that automatic submission of diagnostic and usage data to Apple is disabled, reducing potential exposure
@@ -322,6 +338,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- system
 checksuites:
 - id: lockdown-mode-enabled-check
   description: Verifies that Lockdown Mode is enabled for the current user, providing extreme protection against sophisticated
@@ -346,6 +364,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- system
 checksuites:
 - id: usb-restricted-mode-enabled
   description: 'Verifies that USB Accessory Security (Restricted Mode) is active, requiring user approval before accessories
@@ -374,6 +394,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- auth
 checksuites:
 - id: secure-token-enabled-check
   description: Verifies that the Secure Token is enabled for the current administrative user, which grants Volume Ownership
@@ -398,6 +420,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- system
 checksuites:
 - id: unauthorized-system-extensions-check
   description: Verifies that no third-party System Extensions (non-Apple) are currently loaded on the system, minimizing the
@@ -422,6 +446,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- auth
 checksuites:
 - id: strong-password-policy-enforced
   description: 'Verifies that the global password policy enforces a strong baseline: at least 16 characters, mixed case, numeric,
@@ -449,6 +475,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- auth
 checksuites:
 - id: loginwindow-guest-disabled
   description: Ensures the Guest user account is disabled on the login screen, preventing unauthenticated access to the system,
@@ -472,6 +500,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- auth
 checksuites:
 - id: sudo-tty-tickets-enabled
   description: Verifies 'tty_tickets' is enabled in the sudoers file. This requires a password to be entered for each new
@@ -516,6 +546,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- auth
 checksuites:
 - id: system-preferences-lockdown
   description: Checks if the 'system.preferences' authorization right is set to require an administrator password (shared
@@ -539,6 +571,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- auth
 checksuites:
 - id: passkey-sync-disallowed-check
   description: Verifies that Passkey synchronization via unmanaged iCloud Keychain is disallowed. This prevents corporate
@@ -576,6 +610,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- auth
 checksuites:
 - id: pam-tid-enabled-check
   description: Verifies if Touch ID is enabled for sudo via the safe 'sudo_local' configuration.
@@ -613,6 +649,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- system
 checksuites:
 - id: all-software-up-to-date
   description: Verifies that no new software updates are currently available, confirming the system is running the latest
@@ -737,6 +775,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- network
 checksuites:
 - id: ntp-server-correctly-configured
   description: Ensures the Network Time Protocol (NTP) server is correctly set to a trusted, designated server (e.g., time.euro.apple.com)
@@ -774,6 +814,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- filesystem
 checksuites:
 - id: timemachine-do-not-offer-new-disks
   description: Prevents Time Machine from automatically prompting to use new external disks as backup destinations, maintaining
@@ -843,6 +885,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- system
 checksuites:
 - id: show-all-file-extensions
   description: Verifies that all file extensions are shown in Finder. This prevents users from being tricked by hidden double
@@ -866,6 +910,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- privacy
 checksuites:
 - id: ds-dont-write-network-stores
   description: Prevents Finder from writing `.DS_Store` files to network shares. These files can expose metadata, waste space,
@@ -903,6 +949,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- network
 checksuites:
 - id: application-firewall-enabled
   description: Ensures the Application Firewall is enabled to control and restrict incoming network connections, protecting
@@ -1022,6 +1070,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- network
 checksuites:
 - id: wake-on-magic-packet-disabled
   description: Verifies that 'Wake on Magic Packet' (Wake-on-LAN) is disabled. This prevents the system from being remotely
@@ -1058,6 +1108,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- network
 checksuites:
 - id: handoff-advertising-disabled
   description: Ensures Handoff (Continuity) advertising is disabled. This prevents the constant broadcasting of the device's
@@ -1097,6 +1149,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- network
 checksuites:
 - id: airdrop-disabled
   description: Ensures AirDrop is disabled to prevent unauthorized file transfers to and from the machine, thereby mitigating
@@ -1121,6 +1175,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- network
 checksuites:
 - id: service-tftp-disabled
   description: Verifies that the Trivial File Transfer Protocol (TFTP) service is disabled.
@@ -1198,21 +1254,6 @@ checksuites:
   risk_level: low
   risk_desc: The automated fix disables a core remote access service. Risk is low, but it will disrupt legitimate remote administration
     or support relying on Screen Sharing.
-- id: handoff-advertising-disabled
-  description: Ensures Handoff (Continuity) advertising is disabled. This prevents the constant broadcasting of the device's
-    activity, which can be tracked and compromise user privacy/location.
-  command: defaults -currentHost read com.apple.coreservices.useractivityd ActivityAdvertisingAllowed
-  expected: 0
-  sudo: false
-  fix: defaults -currentHost write com.apple.coreservices.useractivityd ActivityAdvertisingAllowed -bool false
-  fix_sudo: false
-  affected_file: /Library/Preferences/ByHost/com.apple.coreservices.useractivityd.*.plist
-  post_action: The fix is user-specific and takes effect immediately. Disabling this breaks the Handoff/Continuity feature
-    with other Apple devices.
-  security_level: high
-  risk_level: low
-  risk_desc: The automated fix is a non-disruptive 'defaults' write. The only risk is the **loss of Handoff/Continuity functionality**,
-    which may impact user workflow between Apple devices.
 - id: smb-sharing-disabled
   description: Verifies the Server Message Block (SMB) sharing daemon is disabled. SMB sharing should be disabled unless explicitly
     required to reduce the attack surface.
@@ -1367,6 +1408,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- privacy
 checksuites:
 - id: icloud-addressbook-disabled
   description: Verifies that synchronization of Contacts (Address Book) with iCloud is disallowed via a configuration profile,
@@ -1564,6 +1607,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- privacy
 checksuites:
 - id: ecosystem-autounlock-disabled
   description: Verifies that Apple Watch Auto Unlock is disallowed. This forces the user to authenticate via password or Touch
@@ -1601,6 +1646,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- network
 checksuites:
 - id: ssh-client-ciphers-restricted
   description: Ensures the SSH client configuration enforces a strong, modern, and restricted set of Ciphers, removing legacy
@@ -1663,6 +1710,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- privacy
 checksuites:
 - id: system-location-services-disabled
   description: 'Verifies that all system-wide Location Services are disabled. Note: This breaks ''Find My'' and automatic
@@ -1706,6 +1755,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- network
 checksuites:
 - id: pqc-fallback-disallowed-check
   description: Ensures the temporary PQC fallback compatibility mode is disabled, enforcing the use of hybrid quantum-secure
@@ -1729,6 +1780,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- ai
 checksuites:
 - id: siri-disabled-check
   description: Verifies that the Siri voice assistant is disabled to prevent audio recording and data transmission to Apple.
@@ -1785,6 +1838,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- system
 checksuites:
 - id: secure-homebrew-configuration
   description: Verifies that Homebrew analytics are disabled to prevent data leakage regarding installed software.
@@ -1820,6 +1875,8 @@ os: darwin
 arch:
 - arm64
 - amd64
+labels:
+- auth
 checksuites:
 - id: ernw-ecdsa-root-ca-installed
   description: Verifies that the 'ERNW ECDSA Root CA X1' certificate is installed and trusted in the system keychain. This
