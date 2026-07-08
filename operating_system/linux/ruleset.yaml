@@ -14,6 +14,8 @@ arch:
 - arm64
 labels:
 - auth
+labels:
+- auth
 checksuites:
 - id: unique-uid-zero
   description: Verify that 'root' is the only account with UID 0 to prevent unauthorized superuser access.
@@ -52,6 +54,8 @@ arch:
 - arm64
 labels:
 - auth
+labels:
+- auth
 checksuites:
 - id: passwords-shadowed
   description: Verify that all accounts in /etc/passwd have an 'x' in the password field, indicating hashes are stored in
@@ -78,6 +82,8 @@ arch:
 - arm64
 labels:
 - auth
+labels:
+- auth
 checksuites:
 - id: 39-auth-01-pass-encryption
   description: Ensure passwords use SHA512 or better hashing to protect against offline cracking.
@@ -101,30 +107,24 @@ arch:
 - arm64
 labels:
 - auth
+labels:
+- auth
 checksuites:
 - id: pam-stack-integration
   description: Verify that the pam_pwquality module is actually active in the PAM stack.
+  # Detect the correct PAM file at runtime — /etc/pam.d/system-auth on
+  # RHEL/Rocky/Fedora/Arch, /etc/pam.d/common-password on Debian/Ubuntu/openSUSE.
   command: |
-    grep -E '^\s*password\s+requisite\s+pam_pwquality.so' /etc/pam.d/common-password | wc -l
+    f=/etc/pam.d/system-auth
+    [ -f "$f" ] || f=/etc/pam.d/common-password
+    [ -f "$f" ] || { echo 0; exit 0; }
+    grep -cE '^\s*password\s+requisite\s+pam_pwquality.so' "$f"
   expected: 1
   sudo: false
-  distro:
-    rocky:
-      command: |
-        grep -E '^\s*password\s+requisite\s+pam_pwquality.so' /etc/pam.d/system-auth | wc -l
-    rhel:
-      command: |
-        grep -E '^\s*password\s+requisite\s+pam_pwquality.so' /etc/pam.d/system-auth | wc -l
-    fedora:
-      command: |
-        grep -E '^\s*password\s+requisite\s+pam_pwquality.so' /etc/pam.d/system-auth | wc -l
-    archlinux:
-      command: |
-        grep -E '^\s*password\s+requisite\s+pam_pwquality.so' /etc/pam.d/system-auth | wc -l
   fix: 'Manual action required: Ensure ''password requisite pam_pwquality.so'' is present in the password PAM stack. On
-    Debian/Ubuntu/OpenSUSE: edit /etc/pam.d/common-password. On RHEL/Rocky/Fedora: use ''authselect'' to manage PAM
-    (do not edit /etc/pam.d/system-auth directly — it is managed by authselect). On Arch: edit /etc/pam.d/system-auth.
-    Modifying PAM files via scripts is too hazardous for automated fixing.'
+    Debian/Ubuntu/OpenSUSE/SUSE: edit /etc/pam.d/common-password. On RHEL/Rocky/AlmaLinux/Fedora: use ''authselect'' to
+    manage PAM (do not edit /etc/pam.d/system-auth directly — it is managed by authselect). On Arch/Manjaro: edit
+    /etc/pam.d/system-auth. Modifying PAM files via scripts is too hazardous for automated fixing.'
   fix_sudo: false
   affected_file: /etc/pam.d/common-password
   post_action: None
@@ -134,26 +134,18 @@ checksuites:
     lock out users.
 - id: pass-history
   description: Prevent password reuse by remembering the last 5 passwords.
+  # Runtime PAM file detection: system-auth on RHEL/Fedora/Arch,
+  # common-password on Debian/Ubuntu/openSUSE.
   command: |
-    grep -E '^\s*password\s+required\s+pam_pwhistory.so' /etc/pam.d/common-password | grep 'remember=5' | wc -l
+    f=/etc/pam.d/system-auth
+    [ -f "$f" ] || f=/etc/pam.d/common-password
+    [ -f "$f" ] || { echo 0; exit 0; }
+    grep -E '^\s*password\s+required\s+pam_pwhistory.so' "$f" | grep -c 'remember=5'
   expected: 1
   sudo: true
-  distro:
-    rocky:
-      command: |
-        grep -E '^\s*password\s+required\s+pam_pwhistory.so' /etc/pam.d/system-auth | grep 'remember=5' | wc -l
-    rhel:
-      command: |
-        grep -E '^\s*password\s+required\s+pam_pwhistory.so' /etc/pam.d/system-auth | grep 'remember=5' | wc -l
-    fedora:
-      command: |
-        grep -E '^\s*password\s+required\s+pam_pwhistory.so' /etc/pam.d/system-auth | grep 'remember=5' | wc -l
-    archlinux:
-      command: |
-        grep -E '^\s*password\s+required\s+pam_pwhistory.so' /etc/pam.d/system-auth | grep 'remember=5' | wc -l
   fix: 'Manual action required: Add ''password required pam_pwhistory.so remember=5 enforce_for_root'' to the password
-    PAM stack. On Debian/Ubuntu/OpenSUSE: edit /etc/pam.d/common-password. On RHEL/Rocky/Fedora: apply via authselect
-    custom profile. On Arch: edit /etc/pam.d/system-auth.'
+    PAM stack. On Debian/Ubuntu/OpenSUSE/SUSE: edit /etc/pam.d/common-password. On RHEL/Rocky/AlmaLinux/Fedora: apply via
+    authselect custom profile. On Arch/Manjaro: edit /etc/pam.d/system-auth.'
   fix_sudo: false
   affected_file: /etc/pam.d/common-password
   post_action: None
@@ -161,42 +153,26 @@ checksuites:
   risk_level: high
   risk_desc: Required to prevent users from immediately cycling back to a compromised password.
 - id: pam-unix-yescrypt
-  description: Ensure pam_unix is configured to use the strongest available hashing algorithm (yescrypt on Debian/Ubuntu/Arch,
-    SHA-512 on RHEL-family where yescrypt is unavailable).
+  description: Ensure pam_unix is configured to use a strong hashing algorithm (yescrypt preferred; sha512 acceptable where
+    yescrypt is unavailable, e.g. RHEL-family).
+  # Detect the PAM file and accept either algorithm — yescrypt on
+  # Debian/Ubuntu/Arch/openSUSE, sha512 on RHEL/Rocky/Fedora.
   command: |
-    grep -E '^\s*password\s+.*pam_unix.so.*yescrypt' /etc/pam.d/common-password | wc -l
+    f=/etc/pam.d/system-auth
+    [ -f "$f" ] || f=/etc/pam.d/common-password
+    [ -f "$f" ] || { echo 0; exit 0; }
+    grep -cE '^\s*password\s+.*pam_unix.so.*(yescrypt|sha512)' "$f"
   expected: 1
   sudo: true
-  distro:
-    rocky:
-      command: |
-        grep -E '^\s*password\s+.*pam_unix.so.*sha512' /etc/pam.d/system-auth | wc -l
-      expected: '1'
-      fix: 'Manual action required: Ensure the pam_unix.so line in /etc/pam.d/system-auth includes the ''sha512'' option.
-        On RHEL/Rocky/Fedora, use authselect to manage PAM; do not edit system-auth directly.'
-    rhel:
-      command: |
-        grep -E '^\s*password\s+.*pam_unix.so.*sha512' /etc/pam.d/system-auth | wc -l
-      expected: '1'
-      fix: 'Manual action required: Ensure the pam_unix.so line in /etc/pam.d/system-auth includes the ''sha512'' option.
-        On RHEL/Rocky/Fedora, use authselect to manage PAM; do not edit system-auth directly.'
-    fedora:
-      command: |
-        grep -E '^\s*password\s+.*pam_unix.so.*sha512' /etc/pam.d/system-auth | wc -l
-      expected: '1'
-      fix: 'Manual action required: Ensure the pam_unix.so line in /etc/pam.d/system-auth includes the ''sha512'' option.
-        On RHEL/Rocky/Fedora, use authselect to manage PAM; do not edit system-auth directly.'
-    archlinux:
-      command: |
-        grep -E '^\s*password\s+.*pam_unix.so.*(yescrypt|sha512)' /etc/pam.d/system-auth | wc -l
-      fix: 'Manual action required: Update the pam_unix.so line in /etc/pam.d/system-auth to include ''yescrypt'' (preferred)
-        or ''sha512''.'
-  fix: 'Manual action required: Update the pam_unix.so line in /etc/pam.d/common-password to include the ''yescrypt'' option.'
+  fix: 'Manual action required: Update the pam_unix.so line to include ''yescrypt'' (preferred) or ''sha512''. On RHEL/Rocky/Fedora
+    manage via authselect rather than editing system-auth directly.'
   fix_sudo: false
   affected_file: /etc/pam.d/common-password
   post_action: Only affects new passwords.
   security_level: high
   risk_level: medium
+  risk_desc: Yescrypt provides superior resistance to GPU-based cracking compared to SHA-512. RHEL-family distros do not ship
+    yescrypt support; SHA-512 is the strongest available option there.
   risk_desc: Yescrypt provides superior resistance to GPU-based cracking compared to SHA-512. RHEL-family distros do not ship
     yescrypt support; SHA-512 is the strongest available option there.
 
@@ -209,11 +185,22 @@ arch:
 - arm64
 labels:
 - auth
+labels:
+- auth
 checksuites:
 - id: faillock-unlock-time
   description: Verify that the account lockout duration is at least 180 seconds.
-  command: grep -E 'pam_faillock.so.*unlock_time=(18[0-9]|19[0-9]|[2-9][0-9][0-9])' /etc/pam.d/common-auth | wc -l
+  # Runtime PAM file detection — see pam-stack-integration for the rationale.
+  # Note that on RHEL-family the modern place to configure faillock is
+  # /etc/security/faillock.conf via authselect; grepping the PAM stack still
+  # catches directly-edited entries.
+  command: |
+    f=/etc/pam.d/system-auth
+    [ -f "$f" ] || f=/etc/pam.d/common-auth
+    [ -f "$f" ] || { echo 0; exit 0; }
+    grep -cE 'pam_faillock.so.*unlock_time=(18[0-9]|19[0-9]|[2-9][0-9][0-9])' "$f"
   expected: 2
+  expected_op: '>='
   sudo: true
   distro:
     rocky:
@@ -246,6 +233,8 @@ os: linux
 arch:
 - amd64
 - arm64
+labels:
+- auth
 labels:
 - auth
 checksuites:
@@ -295,6 +284,8 @@ arch:
 - arm64
 labels:
 - auth
+labels:
+- auth
 checksuites:
 - id: 67-auth-15-pam-securetty
   description: Ensure pam_securetty.so is enabled to restrict root logins to specific terminals.
@@ -333,6 +324,8 @@ arch:
 - arm64
 labels:
 - auth
+labels:
+- auth
 checksuites:
 - id: use-pty
   description: Ensure that a pseudo-terminal (PTY) is allocated for all sudo commands to prevent input hijacking and ensure
@@ -340,6 +333,7 @@ checksuites:
   command: |
     sudo grep -rE '^Defaults\s+use_pty' /etc/sudoers /etc/sudoers.d/ | wc -l
   expected: 1
+  expected_op: '>='
   expected_op: '>='
   sudo: true
   fix: echo 'Defaults use_pty' | sudo tee /etc/sudoers.d/90-hardening-pty
@@ -378,7 +372,10 @@ checksuites:
   risk_desc: Minor user inconvenience; significantly reduces the window for session hijacking.
 - id: restrict-su-wheel-use-uid
   description: Verify that su is restricted to the wheel group via PAM with the use_uid flag enforced.
+- id: restrict-su-wheel-use-uid
+  description: Verify that su is restricted to the wheel group via PAM with the use_uid flag enforced.
   command: |
+    grep -E '^auth\s+required\s+pam_wheel.so\s+use_uid' /etc/pam.d/su | wc -l
     grep -E '^auth\s+required\s+pam_wheel.so\s+use_uid' /etc/pam.d/su | wc -l
   expected: 1
   sudo: false
@@ -399,6 +396,8 @@ arch:
 - arm64
 labels:
 - auth
+labels:
+- auth
 checksuites:
 - id: shell-timeout
   description: Verify that the TMOUT variable is set to 300 seconds or less in global profile configurations.
@@ -415,7 +414,10 @@ checksuites:
   risk_level: low
   risk_desc: Automatically logs out inactive shells.
 - id: gnome-lock-enabled
-  description: Ensure the GNOME screensaver is configured to lock the screen after a period of inactivity.
+  description: Ensure the GNOME screensaver is configured to lock the screen after a period of inactivity. Only applicable
+    on systems with a GNOME desktop installed (skipped elsewhere) — irrelevant on headless servers regardless of distro,
+    and on Arch/Debian/RHEL-family systems installed without a desktop environment at all.
+  requires_command: gsettings
   command: gsettings get org.gnome.desktop.screensaver lock-enabled
   expected: 'true'
   sudo: false
@@ -427,7 +429,9 @@ checksuites:
   risk_level: low
   risk_desc: Essential for physical security in desktop environments.
 - id: gnome-idle-delay
-  description: Ensure the GNOME idle delay is set to 300 seconds (5 minutes) or less.
+  description: Ensure the GNOME idle delay is set to 300 seconds (5 minutes) or less. Only applicable on systems with a
+    GNOME desktop installed (skipped elsewhere).
+  requires_command: gsettings
   command: gsettings get org.gnome.desktop.session idle-delay | awk '{if($2<=300 && $2!=0) print 1; else print 0}'
   expected: 1
   sudo: false
@@ -448,10 +452,13 @@ arch:
 - arm64
 labels:
 - auth
+labels:
+- auth
 checksuites:
 - id: 40-auth-02-pass-complexity
   description: Ensure password complexity is enforced (minlen=14).
   command: |
+    grep -E 'minlen\s*=\s*14' /etc/security/pwquality.conf | wc -l
     grep -E 'minlen\s*=\s*14' /etc/security/pwquality.conf | wc -l
   expected: 1
   sudo: true
@@ -486,6 +493,8 @@ arch:
 - arm64
 labels:
 - services
+labels:
+- services
 checksuites:
 - id: pkg-purge-insecure
   description: Verify that legacy insecure protocol binaries (rsh, telnetd, vsftpd, tftpd) are not present on the system.
@@ -496,6 +505,9 @@ checksuites:
   fix: 'Manual action required: Remove insecure protocol packages. Debian/Ubuntu: sudo apt-get purge -y rsh-client telnetd
     vsftpd tftpd | RHEL/Rocky/Fedora: sudo dnf remove -y rsh telnet-server vsftpd tftp-server | OpenSUSE: sudo zypper
     remove -y rsh telnetd vsftpd tftp | Arch: sudo pacman -Rns rsh inetutils vsftpd'
+  fix: 'Manual action required: Remove insecure protocol packages. Debian/Ubuntu: sudo apt-get purge -y rsh-client telnetd
+    vsftpd tftpd | RHEL/Rocky/Fedora: sudo dnf remove -y rsh telnet-server vsftpd tftp-server | OpenSUSE: sudo zypper
+    remove -y rsh telnetd vsftpd tftp | Arch: sudo pacman -Rns rsh inetutils vsftpd'
   fix_sudo: false
   affected_file: N/A
   post_action: None
@@ -503,13 +515,17 @@ checksuites:
   risk_level: low
   risk_desc: Removes packages that transmit data in clear text.
 - id: svc-disable-avahi
-  description: Ensure the Avahi daemon is disabled and masked to prevent unauthorized network discovery.
-  command: systemctl is-enabled avahi-daemon 2>/dev/null | grep -E 'disabled|masked' | wc -l
+  description: Ensure the Avahi daemon is disabled/masked or not installed at all.
+  # Passes unless the unit is actively "enabled". "not-found", "disabled",
+  # "masked", "static", "indirect", empty, etc. all count as "not enabled".
+  command: |
+    state=$(systemctl is-enabled avahi-daemon.service 2>/dev/null | tr -d '[:space:]' || true)
+    if [ "$state" = "enabled" ] || [ "$state" = "alias" ]; then echo 0; else echo 1; fi
   expected: 1
   sudo: false
   fix: sudo systemctl mask avahi-daemon
   fix_sudo: true
-  affected_file: avahi-daemon.service
+  affected_file: /etc/systemd/system/avahi-daemon.service
   post_action: None
   security_level: baseline
   risk_level: low
@@ -529,13 +545,17 @@ checksuites:
   risk_level: medium
   risk_desc: Prevents remote access to the printing service while maintaining local functionality.
 - id: svc-disable-bluetooth
-  description: Ensure Bluetooth services are disabled on systems where wireless communication is not required.
-  command: systemctl is-enabled bluetooth 2>/dev/null | grep -E 'disabled|masked' | wc -l
+  description: Ensure Bluetooth services are disabled/masked or not installed on systems where wireless communication is not
+    required.
+  # Same pattern as svc-disable-avahi — pass unless the unit is enabled.
+  command: |
+    state=$(systemctl is-enabled bluetooth.service 2>/dev/null | tr -d '[:space:]' || true)
+    if [ "$state" = "enabled" ] || [ "$state" = "alias" ]; then echo 0; else echo 1; fi
   expected: 1
   sudo: false
   fix: sudo systemctl mask bluetooth
   fix_sudo: true
-  affected_file: bluetooth.service
+  affected_file: /etc/systemd/system/bluetooth.service
   post_action: None
   security_level: baseline
   risk_level: low
@@ -550,8 +570,16 @@ arch:
 - arm64
 labels:
 - network
+labels:
+- network
 checksuites:
 - id: firewall-active
+  description: Verify that a host-based firewall is active (UFW, firewalld, nftables, or iptables with rules).
+  command: |
+    { sudo ufw status 2>/dev/null | grep -q 'Status: active' \
+      || sudo firewall-cmd --state 2>/dev/null | grep -q 'running' \
+      || sudo nft list ruleset 2>/dev/null | grep -qE 'chain|table' \
+      || sudo iptables-save 2>/dev/null | grep -qE '^-[AI]'; } && echo 1 || echo 0
   description: Verify that a host-based firewall is active (UFW, firewalld, nftables, or iptables with rules).
   command: |
     { sudo ufw status 2>/dev/null | grep -q 'Status: active' \
@@ -562,11 +590,14 @@ checksuites:
   sudo: true
   fix: |
     Manual action required: Enable and start your system's host firewall.
-    On Ubuntu/Debian/Arch (UFW):
+    On Ubuntu (UFW is preinstalled):
       sudo ufw enable
-    On Rocky/Fedora/RHEL/OpenSUSE (firewalld):
+    On Debian/Arch (no firewall frontend ships by default — install one first):
+      sudo apt install ufw && sudo ufw enable          # Debian
+      sudo pacman -S ufw && sudo systemctl enable --now ufw   # Arch
+    On Rocky/AlmaLinux/Fedora/RHEL/SUSE (firewalld is preinstalled and usually already enabled):
       sudo systemctl enable --now firewalld
-    With nftables:
+    With nftables (Debian's default backend since Buster, also available everywhere):
       sudo systemctl enable --now nftables
     With iptables:
       sudo iptables -P INPUT DROP && sudo iptables-save | sudo tee /etc/iptables/rules.v4
@@ -584,13 +615,23 @@ checksuites:
            && sudo firewall-cmd --get-default-zone 2>/dev/null | grep -qE '^(drop|block)$'; } \
       || sudo nft list ruleset 2>/dev/null | grep -qiE 'hook input.*policy drop' \
       || sudo iptables -L INPUT 2>/dev/null | head -1 | grep -qE 'policy (DROP|REJECT)'; } && echo 1 || echo 0
+  description: Verify that the default policy for incoming traffic is set to deny (UFW, firewalld, nftables, or iptables).
+  command: |
+    { sudo ufw status verbose 2>/dev/null | grep -q 'Default: deny (incoming)' \
+      || { sudo firewall-cmd --state 2>/dev/null | grep -q 'running' \
+           && sudo firewall-cmd --get-default-zone 2>/dev/null | grep -qE '^(drop|block)$'; } \
+      || sudo nft list ruleset 2>/dev/null | grep -qiE 'hook input.*policy drop' \
+      || sudo iptables -L INPUT 2>/dev/null | head -1 | grep -qE 'policy (DROP|REJECT)'; } && echo 1 || echo 0
   expected: 1
   sudo: true
   fix: |
     Manual action required: Set the default incoming policy to deny.
-    On Ubuntu/Debian/Arch (UFW):
+    On Ubuntu (UFW is preinstalled):
       sudo ufw default deny incoming
-    On Rocky/Fedora/RHEL/OpenSUSE (firewalld):
+    On Debian/Arch (install UFW first, or use the native backend directly):
+      sudo apt install ufw && sudo ufw default deny incoming          # Debian
+      sudo pacman -S ufw && sudo ufw default deny incoming            # Arch
+    On Rocky/AlmaLinux/Fedora/RHEL/SUSE (firewalld):
       sudo firewall-cmd --set-default-zone=drop --permanent && sudo firewall-cmd --reload
     With nftables: set 'policy drop' on the input chain in /etc/nftables.conf.
     With iptables:
@@ -611,15 +652,18 @@ arch:
 - arm64
 labels:
 - network
+labels:
+- network
 checksuites:
 - id: ssh-server-removed
   description: Ensure the SSH server daemon is not installed to close the remote access attack surface.
   command: command -v sshd >/dev/null 2>&1 && echo 1 || echo 0
   expected: 0
   sudo: false
-  fix: 'Manual action required: Remove the SSH server package (e.g., on Debian/Ubuntu: sudo apt-get purge -y openssh-server
-    | on RHEL/Fedora: sudo dnf remove openssh-server | on Arch: sudo pacman -Rns openssh | on OpenSUSE: sudo zypper remove
-    openssh)'
+  fix: 'Manual action required: Remove the SSH server package. Debian/Ubuntu: sudo apt-get purge -y openssh-server |
+    RHEL/Rocky/Fedora: sudo dnf remove -y openssh-server | SUSE: sudo zypper remove -y openssh-server | Arch: sudo
+    pacman -R openssh (Arch ships client and server in a single package; removing it drops both, so use
+    ''systemctl disable --now sshd'' instead if you only want the daemon inactive).'
   fix_sudo: false
   affected_file: N/A
   post_action: None
@@ -631,9 +675,9 @@ checksuites:
   command: command -v ssh >/dev/null 2>&1 && echo 1 || echo 0
   expected: 1
   sudo: false
-  fix: 'Manual action required: Install the SSH client package (e.g., on Debian/Ubuntu: sudo apt-get install -y openssh-client
-    | on RHEL/Fedora: sudo dnf install openssh-clients | on Arch: sudo pacman -S openssh | on OpenSUSE: sudo zypper install
-    openssh)'
+  fix: 'Manual action required: Install the SSH client package. Debian/Ubuntu: sudo apt-get install -y openssh-client |
+    RHEL/Rocky/Fedora: sudo dnf install -y openssh-clients | SUSE: sudo zypper install -y openssh-clients | Arch:
+    sudo pacman -S --noconfirm openssh (single package provides both client and server on Arch).'
   fix_sudo: false
   affected_file: N/A
   post_action: None
@@ -650,10 +694,12 @@ arch:
 - arm64
 labels:
 - kernel
+labels:
+- kernel
 checksuites:
 - id: 14-kernel-01-dmesg-restrict
   description: Restrict access to the kernel message buffer (dmesg) to root only to prevent information leakage.
-  command: sysctl -n kernel.dmesg_restrict
+  command: cat /proc/sys/kernel/dmesg_restrict
   expected: 1
   sudo: true
   fix: |
@@ -668,7 +714,7 @@ checksuites:
   risk_desc: Prevents non-root users from viewing kernel logs. May impact debugging tools running as user.
 - id: 15-kernel-02-randomize-va-space
   description: Enable Address Space Layout Randomization (ASLR) to prevent buffer overflow exploits.
-  command: sysctl -n kernel.randomize_va_space
+  command: cat /proc/sys/kernel/randomize_va_space
   expected: 2
   sudo: true
   fix: |
@@ -683,7 +729,7 @@ checksuites:
   risk_desc: Standard security feature on modern Linux.
 - id: 16-kernel-03-disable-core-dumps
   description: Restrict core dumps (fs.suid_dumpable) to prevent sensitive memory from being written to disk during crashes.
-  command: sysctl -n fs.suid_dumpable
+  command: cat /proc/sys/fs/suid_dumpable
   expected: 0
   sudo: true
   fix: |
@@ -698,9 +744,14 @@ checksuites:
   risk_desc: Inhibits debugging of crashing services. Developers may need this re-enabled temporarily.
 - id: 17-kernel-04-yama-ptrace-scope
   description: Restrict ptrace to prevent unprivileged processes from inspecting sibling processes.
-  command: sysctl -n kernel.yama.ptrace_scope
+  # Requires the Yama LSM — not compiled into every kernel (e.g. openSUSE Leap
+  # 15.6 default). Skip with a neutral "missing" state where /proc/sys/kernel/yama
+  # is absent rather than falsely reporting a hardening failure.
+  requires_file: /proc/sys/kernel/yama/ptrace_scope
+  command: cat /proc/sys/kernel/yama/ptrace_scope
   expected: 1
-  sudo: true
+  expected_op: '>='
+  sudo: false
   fix: |
     sudo mkdir -p /etc/sysctl.d/
     sudo touch /etc/sysctl.d/10-kernel-hardening.conf
@@ -713,7 +764,7 @@ checksuites:
   risk_desc: May interfere with gdb/strace for non-root users.
 - id: 18-kernel-05-kptr-restrict
   description: Hide kernel symbols/addresses from unprivileged users to mitigate KASLR bypass attacks.
-  command: sysctl -n kernel.kptr_restrict
+  command: cat /proc/sys/kernel/kptr_restrict
   expected: 2
   sudo: true
   fix: |
@@ -728,7 +779,7 @@ checksuites:
   risk_desc: Essential for protecting against kernel exploits; minimal impact on normal operations.
 - id: 19-kernel-06-ebpf-unprivileged-disabled
   description: Disable unprivileged eBPF to reduce the kernel attack surface.
-  command: sysctl -n kernel.unprivileged_bpf_disabled
+  command: cat /proc/sys/kernel/unprivileged_bpf_disabled
   expected: 1
   sudo: true
   fix: |
@@ -743,7 +794,7 @@ checksuites:
   risk_desc: Breaks non-root performance tracing and specific network filters.
 - id: 20-kernel-07-ebpf-jit-hardening
   description: Enable eBPF JIT hardening to mitigate JIT spraying and information leaks.
-  command: sysctl -n net.core.bpf_jit_harden
+  command: cat /proc/sys/net/core/bpf_jit_harden
   expected: 2
   sudo: true
   fix: |
@@ -756,9 +807,12 @@ checksuites:
   security_level: high
   risk_level: medium
   risk_desc: Setting bpf_jit_harden=2 disables eBPF JIT for all programs; on client systems this can significantly degrade performance of browser-based seccomp filters.
+  security_level: high
+  risk_level: medium
+  risk_desc: Setting bpf_jit_harden=2 disables eBPF JIT for all programs; on client systems this can significantly degrade performance of browser-based seccomp filters.
 - id: 21-kernel-08-userns-clone-disabled
   description: Disable unprivileged user namespace creation to limit attack surface.
-  command: sysctl -n kernel.unprivileged_userns_clone
+  command: cat /proc/sys/kernel/unprivileged_userns_clone
   expected: 0
   sudo: true
   fix: |
@@ -773,7 +827,7 @@ checksuites:
   risk_desc: 'CRITICAL: Breaks rootless containers (Podman), Flatpaks, and browser sandboxing.'
 - id: 22-kernel-09-protected-fifos
   description: Enable strict FIFO protection to prevent race conditions in named pipes.
-  command: sysctl -n fs.protected_fifos
+  command: cat /proc/sys/fs/protected_fifos
   expected: 2
   sudo: true
   fix: |
@@ -820,7 +874,7 @@ checksuites:
   risk_desc: Disables Stream Control Transmission Protocol.
 - id: 25-net-01-syn-cookies
   description: Enable TCP SYN cookies to mitigate SYN flood Denial of Service (DoS) attacks.
-  command: sysctl -n net.ipv4.tcp_syncookies
+  command: cat /proc/sys/net/ipv4/tcp_syncookies
   expected: 1
   sudo: true
   fix: |
@@ -834,10 +888,12 @@ checksuites:
   risk_level: low
   risk_desc: Activates only under high load/attack. No impact on normal traffic.
 - id: 26-net-02-rp-filter
-  description: Enable Reverse Path Filtering (Anti-spoofing) to validate source addresses.
-  command: sysctl -n net.ipv4.conf.all.rp_filter
+  description: Enable Reverse Path Filtering (Anti-spoofing) to validate source addresses. Any non-zero value (1=strict, 2=loose)
+    is acceptable — some distros default to 2.
+  command: cat /proc/sys/net/ipv4/conf/all/rp_filter
   expected: 1
-  sudo: true
+  expected_op: '>='
+  sudo: false
   fix: echo 'net.ipv4.conf.all.rp_filter=1' | sudo tee -a /etc/sysctl.d/90-network-hardening.conf
   fix_sudo: true
   affected_file: /etc/sysctl.d/90-network-hardening.conf
@@ -847,7 +903,7 @@ checksuites:
   risk_desc: Strict mode (1) may drop packets in asymmetric routing environments. Use loose mode (2) if connectivity fails.
 - id: 27-net-03-accept-redirects
   description: Disable acceptance of ICMP redirects to prevent routing table manipulation (MITM).
-  command: sysctl -n net.ipv4.conf.all.accept_redirects
+  command: cat /proc/sys/net/ipv4/conf/all/accept_redirects
   expected: 0
   sudo: true
   fix: echo 'net.ipv4.conf.all.accept_redirects=0' | sudo tee -a /etc/sysctl.d/90-network-hardening.conf
@@ -859,7 +915,7 @@ checksuites:
   risk_desc: Safe to disable unless the network relies on dynamic legacy routing updates.
 - id: 28-net-04-source-route
   description: Disable acceptance of packets with source routing options.
-  command: sysctl -n net.ipv4.conf.all.accept_source_route
+  command: cat /proc/sys/net/ipv4/conf/all/accept_source_route
   expected: 0
   sudo: true
   fix: echo 'net.ipv4.conf.all.accept_source_route=0' | sudo tee -a /etc/sysctl.d/90-network-hardening.conf
@@ -871,7 +927,7 @@ checksuites:
   risk_desc: Source routing is deprecated and rarely used; disabling has no operational risk.
 - id: 29-net-05-bogus-icmp
   description: Ignore ICMP packets with bogus error responses to reduce log noise and potential DoS.
-  command: sysctl -n net.ipv4.icmp_ignore_bogus_error_responses
+  command: cat /proc/sys/net/ipv4/icmp_ignore_bogus_error_responses
   expected: 1
   sudo: true
   fix: echo 'net.ipv4.icmp_ignore_bogus_error_responses=1' | sudo tee -a /etc/sysctl.d/90-network-hardening.conf
@@ -883,9 +939,9 @@ checksuites:
   risk_desc: Pure security measure; no impact on legitimate traffic.
 - id: 30-net-06-ipv4-ip_forward-disabled
   description: Ensure IP forwarding is disabled.
-  command: sysctl -n net.ipv4.ip_forward
+  command: cat /proc/sys/net/ipv4/ip_forward
   expected: 0
-  sudo: true
+  sudo: false
   fix: |
     sysctl -w net.ipv4.ip_forward=0
     sed -i "/net.ipv4.ip_forward/d" /etc/sysctl.conf
@@ -898,9 +954,9 @@ checksuites:
   risk_desc: Prevents routing packets between network interfaces.
 - id: 31-net-07-ipv4-conf-all-send_redirects-disabled
   description: Disable ICMP send_redirects.
-  command: sysctl -n net.ipv4.conf.all.send_redirects
+  command: cat /proc/sys/net/ipv4/conf/all/send_redirects
   expected: 0
-  sudo: true
+  sudo: false
   fix: |
     sysctl -w net.ipv4.conf.all.send_redirects=0
     sed -i "/net.ipv4.conf.all.send_redirects/d" /etc/sysctl.conf
@@ -949,11 +1005,15 @@ arch:
 - arm64
 labels:
 - network
+labels:
+- network
 checksuites:
 - id: hosts-deny-all
   description: 'Enforce a ''Default Deny'' policy by ensuring /etc/hosts.deny contains ''ALL: ALL''. This ensures that only
-    services explicitly listed in /etc/hosts.allow are accessible. TCP Wrappers (libwrap) are available on all major distributions
-    but the package name differs: ''tcp-wrappers'' on RHEL/Rocky/Fedora, included in base installations on Debian/Ubuntu/Arch.'
+    services explicitly listed in /etc/hosts.allow are accessible. /etc/hosts.deny ships out of the box on Debian/Ubuntu
+    (netbase) and is present on RHEL/Rocky/Fedora/SUSE, but Arch ships neither the file nor a packaged tcp_wrappers
+    (only available via the AUR) — the check is skipped there instead of failing on a file that was never meant to exist.'
+  requires_file: /etc/hosts.deny
   command: grep -Px "ALL:\s*ALL" /etc/hosts.deny | wc -l
   expected: 1
   sudo: true
@@ -963,9 +1023,11 @@ checksuites:
       echo 'sshd: 192.168.1.' | sudo tee -a /etc/hosts.allow
     Then apply the deny-all rule:
       echo 'ALL: ALL' | sudo tee /etc/hosts.deny
-    Note: On Rocky/Fedora/RHEL/OpenSUSE, verify the tcp_wrappers package is installed:
+    Note: On Rocky/Fedora/RHEL, verify the tcp_wrappers package is installed:
       e.g., sudo dnf install tcp-wrappers   (RHEL/Rocky/Fedora)
-            sudo zypper install tcpd         (OpenSUSE)
+            sudo zypper install tcpd         (SUSE)
+    On Arch, tcp_wrappers is only available via the AUR (e.g. yay -S tcp_wrappers) and is unmaintained upstream —
+    prefer nftables/firewalld/ufw rules over reviving it.
   fix_sudo: true
   affected_file: /etc/hosts.deny
   post_action: None
@@ -975,7 +1037,8 @@ checksuites:
     MUST verify that your management IP or service (e.g., sshd) is whitelisted in /etc/hosts.allow before applying this fix.'
 - id: hosts-allow-permissions
   description: Ensure restrictive permissions (0644) are set on /etc/hosts.allow to prevent unauthorized modification of access
-    control rules.
+    control rules. Skipped on distros (e.g. Arch) that ship without this file.
+  requires_file: /etc/hosts.allow
   command: stat -c '%a' /etc/hosts.allow
   expected: 644
   sudo: false
@@ -987,7 +1050,9 @@ checksuites:
   risk_level: low
   risk_desc: Changing permissions on this file poses a low operational risk.
 - id: hosts-deny-permissions
-  description: Ensure restrictive permissions (0644) are set on /etc/hosts.deny.
+  description: Ensure restrictive permissions (0644) are set on /etc/hosts.deny. Skipped on distros (e.g. Arch) that ship
+    without this file.
+  requires_file: /etc/hosts.deny
   command: stat -c '%a' /etc/hosts.deny
   expected: 644
   sudo: false
@@ -1008,13 +1073,28 @@ arch:
 - arm64
 labels:
 - services
+labels:
+- services
 checksuites:
 - id: chronyd-active
   description: Verify that a time synchronization service (chrony or systemd-timesyncd) is actively running to ensure accurate
     timekeeping.
-  command: (systemctl is-active chronyd 2>/dev/null || systemctl is-active systemd-timesyncd 2>/dev/null) | grep -c '^active'
+  # Check each service in sequence — the pipe/OR pattern from the previous
+  # version dropped output from the fallback branch. Any one being active is
+  # enough (expected_op: '>=').
+  command: |
+    {
+      systemctl is-active chronyd 2>/dev/null
+      systemctl is-active chrony 2>/dev/null
+      systemctl is-active systemd-timesyncd 2>/dev/null
+    } | grep -c '^active$'
   expected: 1
+  expected_op: '>='
   sudo: false
+  fix: 'Manual action required: Install and enable a time synchronization service. Debian/Ubuntu: sudo apt install chrony
+    && sudo systemctl enable --now chronyd | RHEL/Rocky/Fedora: sudo dnf install -y chrony && sudo systemctl enable --now
+    chronyd | OpenSUSE: sudo zypper install -y chrony && sudo systemctl enable --now chronyd | Arch: sudo pacman -S --noconfirm
+    chrony && sudo systemctl enable --now chronyd'
   fix: 'Manual action required: Install and enable a time synchronization service. Debian/Ubuntu: sudo apt install chrony
     && sudo systemctl enable --now chronyd | RHEL/Rocky/Fedora: sudo dnf install -y chrony && sudo systemctl enable --now
     chronyd | OpenSUSE: sudo zypper install -y chrony && sudo systemctl enable --now chronyd | Arch: sudo pacman -S --noconfirm
@@ -1026,12 +1106,30 @@ checksuites:
   risk_level: low
   risk_desc: Chrony is the modern standard for time synchronization; enabling it poses no operational risk.
 - id: chronyd-non-root
-  description: Verify that the Chrony daemon runs as an unprivileged user (e.g., 'chrony' or 'ntp') to minimize the impact
+  description: Verify that the time-sync daemon (chrony or systemd-timesyncd) runs as an unprivileged user to minimize the impact
     of a potential compromise.
-  command: ps -eo user,comm | grep chronyd | grep -v root | wc -l
+  # Use /proc directly — `ps` isn't always installed on minimal images
+  # (openSUSE Leap 15.6 base). Match chronyd/chrony/systemd-timesyncd; report
+  # 1 (pass) if all matching processes run as non-root.
+  command: |
+    matched=0
+    non_root=0
+    for pid in $(ls /proc 2>/dev/null | grep -E '^[0-9]+$'); do
+      c=$(cat /proc/$pid/comm 2>/dev/null || echo)
+      case "$c" in
+        chronyd|chrony|systemd-timesyn) matched=$((matched+1))
+          u=$(awk '/^Uid:/ {print $2; exit}' /proc/$pid/status 2>/dev/null)
+          [ "$u" != "0" ] && non_root=$((non_root+1)) ;;
+      esac
+    done
+    if [ "$matched" -eq 0 ]; then echo 0
+    elif [ "$matched" = "$non_root" ]; then echo 1
+    else echo 0
+    fi
   expected: 1
   expected_op: '>='
   sudo: false
+  requires_file: /proc/1/status
   fix: 'Manual action required: Verify the chronyd systemd unit file (e.g., /lib/systemd/system/chronyd.service) contains
     the ''User=chrony'' directive. Restart if needed.'
   fix_sudo: true
@@ -1042,33 +1140,22 @@ checksuites:
   risk_desc: This is usually the default setting in modern distributions and only confirms privilege separation.
 - id: chrony-cmd-restriction
   description: Ensure that Chrony's command interface (for control and monitoring) is restricted to the localhost interface.
+  # Detect the config file at runtime: /etc/chrony/chrony.conf on Debian/Ubuntu,
+  # /etc/chrony.conf on RHEL-family/openSUSE/Arch. Skip cleanly if chrony
+  # isn't installed (neither file present).
   command: |
-    grep -cE '^\s*bindcmdaddress\s+(127\.0\.0\.1|::1)' /etc/chrony/chrony.conf
+    f=/etc/chrony/chrony.conf
+    [ -f "$f" ] || f=/etc/chrony.conf
+    [ -f "$f" ] || { echo 1; exit 0; }
+    grep -cE '^\s*bindcmdaddress\s+(127\.0\.0\.1|::1)' "$f"
   expected: 1
   expected_op: '>='
   sudo: false
-  distro:
-    rocky:
-      command: |
-        grep -cE '^\s*bindcmdaddress\s+(127\.0\.0\.1|::1)' /etc/chrony.conf
-      fix: echo 'bindcmdaddress 127.0.0.1' | sudo tee -a /etc/chrony.conf && echo 'bindcmdaddress ::1' | sudo tee -a /etc/chrony.conf
-    rhel:
-      command: |
-        grep -cE '^\s*bindcmdaddress\s+(127\.0\.0\.1|::1)' /etc/chrony.conf
-      fix: echo 'bindcmdaddress 127.0.0.1' | sudo tee -a /etc/chrony.conf && echo 'bindcmdaddress ::1' | sudo tee -a /etc/chrony.conf
-    fedora:
-      command: |
-        grep -cE '^\s*bindcmdaddress\s+(127\.0\.0\.1|::1)' /etc/chrony.conf
-      fix: echo 'bindcmdaddress 127.0.0.1' | sudo tee -a /etc/chrony.conf && echo 'bindcmdaddress ::1' | sudo tee -a /etc/chrony.conf
-    opensuse:
-      command: |
-        grep -cE '^\s*bindcmdaddress\s+(127\.0\.0\.1|::1)' /etc/chrony.conf
-      fix: echo 'bindcmdaddress 127.0.0.1' | sudo tee -a /etc/chrony.conf && echo 'bindcmdaddress ::1' | sudo tee -a /etc/chrony.conf
-    archlinux:
-      command: |
-        grep -cE '^\s*bindcmdaddress\s+(127\.0\.0\.1|::1)' /etc/chrony.conf
-      fix: echo 'bindcmdaddress 127.0.0.1' | sudo tee -a /etc/chrony.conf && echo 'bindcmdaddress ::1' | sudo tee -a /etc/chrony.conf
-  fix: echo 'bindcmdaddress 127.0.0.1' | sudo tee -a /etc/chrony/chrony.conf && echo 'bindcmdaddress ::1' | sudo tee -a /etc/chrony/chrony.conf
+  fix: |
+    f=/etc/chrony/chrony.conf
+    [ -f "$f" ] || f=/etc/chrony.conf
+    echo 'bindcmdaddress 127.0.0.1' | sudo tee -a "$f"
+    echo 'bindcmdaddress ::1'       | sudo tee -a "$f"
   fix_sudo: true
   affected_file: /etc/chrony/chrony.conf
   post_action: 'Restart chronyd: sudo systemctl restart chronyd'
@@ -1083,19 +1170,15 @@ checksuites:
   expected_op: '>='
   sudo: false
   distro:
-    rocky:
-      command: grep -c 'nts' /etc/chrony.conf
     rhel:
       command: grep -c 'nts' /etc/chrony.conf
-    fedora:
+    suse:
       command: grep -c 'nts' /etc/chrony.conf
-    opensuse:
-      command: grep -c 'nts' /etc/chrony.conf
-    archlinux:
+    arch:
       command: grep -c 'nts' /etc/chrony.conf
   fix: 'Manual action required: Add a time source that supports NTS, e.g., ''server time.cloudflare.com iburst nts''. Consult
     trusted NTP providers for NTS-enabled servers. Config file: /etc/chrony/chrony.conf (Debian/Ubuntu) or /etc/chrony.conf
-    (RHEL/Rocky/Fedora/OpenSUSE/Arch).'
+    (RHEL/Rocky/AlmaLinux/Fedora/SUSE/Arch).'
   fix_sudo: true
   affected_file: /etc/chrony/chrony.conf
   post_action: 'Restart chronyd: sudo systemctl restart chronyd'
@@ -1114,10 +1197,13 @@ arch:
 labels:
 - network
 - kernel
+labels:
+- network
+- kernel
 checksuites:
 - id: ipv6-accept-redirects-disabled
   description: Disable acceptance of ICMPv6 redirects to prevent Man-in-the-Middle routing manipulation.
-  command: sysctl -n net.ipv6.conf.all.accept_redirects
+  command: cat /proc/sys/net/ipv6/conf/all/accept_redirects
   expected: 0
   sudo: true
   fix: |
@@ -1133,7 +1219,7 @@ checksuites:
   risk_desc: Prevents unauthorized route injection via ICMPv6.
 - id: ipv6-source-route-disabled
   description: Disable acceptance of IPv6 packets with source routing options.
-  command: sysctl -n net.ipv6.conf.all.accept_source_route
+  command: cat /proc/sys/net/ipv6/conf/all/accept_source_route
   expected: 0
   sudo: true
   fix: |
@@ -1149,7 +1235,7 @@ checksuites:
   risk_desc: Source routing is deprecated and poses a security risk; disabling it has no operational impact.
 - id: ipv6-privacy-extensions
   description: Verify that IPv6 Privacy Extensions (RFC 4941) are enabled.
-  command: sysctl -n net.ipv6.conf.all.use_tempaddr
+  command: cat /proc/sys/net/ipv6/conf/all/use_tempaddr
   expected: 2
   sudo: true
   fix: |
@@ -1165,7 +1251,7 @@ checksuites:
   risk_desc: Essential for protecting client identity by preventing hardware-based EUI-64 tracking.
 - id: ipv6-router-advertisements-restricted
   description: Ensure the system ignores Hop Limit and other configuration flags in Router Advertisements.
-  command: sysctl -n net.ipv6.conf.all.accept_ra_pinfo
+  command: cat /proc/sys/net/ipv6/conf/all/accept_ra_pinfo
   expected: 1
   sudo: true
   fix: |
@@ -1189,8 +1275,13 @@ arch:
 - arm64
 labels:
 - services
+labels:
+- services
 checksuites:
 - id: cups-browsed-disabled
+  description: The cups-browsed service must be disabled or masked to prevent automatic printer discovery and reduce the attack surface.
+  command: systemctl is-enabled cups-browsed 2>/dev/null | grep -cE '^enabled$'
+  expected: 0
   description: The cups-browsed service must be disabled or masked to prevent automatic printer discovery and reduce the attack surface.
   command: systemctl is-enabled cups-browsed 2>/dev/null | grep -cE '^enabled$'
   expected: 0
@@ -1213,17 +1304,24 @@ arch:
 - arm64
 labels:
 - services
+labels:
+- services
 checksuites:
 - id: samba-service-inactive-or-not-installed
-  description: The Samba service (smbd and nmbd) must be inactive and disabled, or not installed, to minimize the attack surface.
+  description: The Samba service must be inactive and disabled, or not installed, to minimize the attack surface. Unit
+    names differ by distro — smbd/nmbd on Debian/Ubuntu/RHEL-family/SUSE, but smb/nmb on Arch's samba package.
   command: (systemctl is-enabled smbd 2>/dev/null; systemctl is-enabled nmbd 2>/dev/null) | grep -c '^enabled'
   expected: 0
   sudo: false
+  distro:
+    arch:
+      command: (systemctl is-enabled smb 2>/dev/null; systemctl is-enabled nmb 2>/dev/null) | grep -c '^enabled'
+      fix: systemctl disable --now smb nmb 2>/dev/null || true
   fix: systemctl disable --now smbd nmbd 2>/dev/null || true
   fix_sudo: true
   affected_file: N/A
-  post_action: 'Manual action required: If the service persists, remove the samba package (e.g., Debian/Ubuntu: sudo apt purge
-    samba | RHEL: sudo yum remove samba | SUSE: sudo zypper remove samba)'
+  post_action: 'Manual action required: If the service persists, remove the samba package. Debian/Ubuntu: sudo apt purge
+    samba | RHEL/Rocky/Fedora: sudo dnf remove -y samba | SUSE: sudo zypper remove samba | Arch: sudo pacman -R samba'
   security_level: baseline
   risk_level: low
   risk_desc: Disabling or removing Samba will prevent SMB/CIFS file sharing. Only disruptive if the system is intended as
@@ -1238,11 +1336,16 @@ arch:
 - arm64
 labels:
 - network
+labels:
+- network
 checksuites:
 - id: 64-dns-loopback-bind
   description: Verify that local DNS resolver services are restricted to the loopback address to prevent network exposure.
+  # Whole 127.0.0.0/8 is loopback — systemd-resolved binds to 127.0.0.53/54
+  # on Ubuntu/Debian, which the previous regex incorrectly flagged as
+  # non-loopback.
   command: |
-    sudo ss -tuln | grep -E ':53\s' | grep -vE '(127\.0\.0\.1|::1|\[::1\])' | wc -l
+    sudo ss -tuln | awk '$5 ~ /:53$/' | grep -vE '(127\.[0-9]+\.[0-9]+\.[0-9]+|::1|\[::1\])' | wc -l
   expected: 0
   sudo: true
   fix: 'Manual action required: Edit the configuration of your resolver (systemd-resolved or Unbound) to ensure it only listens
@@ -1290,11 +1393,15 @@ arch:
 - arm64
 labels:
 - network
+labels:
+- network
 checksuites:
 - id: 67-hosts-loopback-ipv4
   description: Verify that the IPv4 loopback address (127.0.0.1) is correctly configured for localhost.
+  # Regex tolerates Arch's default "127.0.0.1 localhost.localdomain localhost"
+  # by allowing intermediate aliases before the "localhost" token.
   command: |
-    grep -E '^\s*127\.0\.0\.1\s+localhost' /etc/hosts | wc -l
+    grep -E '^\s*127\.0\.0\.1[[:space:]]+([^#[:space:]]+[[:space:]]+)*localhost([[:space:]]|$)' /etc/hosts | wc -l
   expected: 1
   expected_op: '>='
   sudo: false
@@ -1308,8 +1415,10 @@ checksuites:
   risk_desc: Essential for local services to resolve correctly.
 - id: 68-hosts-loopback-ipv6
   description: Verify that the IPv6 loopback address (::1) is correctly configured for localhost.
+  # Accept either "localhost" or the Debian/Ubuntu default "ip6-localhost"
+  # and tolerate multiple aliases on the line.
   command: |
-    grep -E '^\s*::1\s+localhost' /etc/hosts | wc -l
+    grep -E '^\s*::1[[:space:]]+([^#[:space:]]+[[:space:]]+)*(localhost|ip6-localhost)([[:space:]]|$)' /etc/hosts | wc -l
   expected: 1
   expected_op: '>='
   sudo: false
@@ -1322,8 +1431,15 @@ checksuites:
   risk_desc: Prevents resolution delays or failures in IPv6-enabled applications.
 - id: 69-hosts-hostname-resolution
   description: Verify that the system hostname is correctly mapped in the hosts file.
+  # Fall back to `hostnamectl --static` then /etc/hostname because the plain
+  # `hostname` binary isn't always installed on Arch/openSUSE minimal images.
   command: |
-    grep -cE "^\s*(127\.0\.(0|1)\.1)\s+$(hostname)" /etc/hosts
+    HN=$( (command -v hostname >/dev/null 2>&1 && hostname) \
+          || (command -v hostnamectl >/dev/null 2>&1 && hostnamectl --static 2>/dev/null) \
+          || (cat /etc/hostname 2>/dev/null) )
+    HN=$(printf '%s' "$HN" | tr -d '[:space:]')
+    [ -n "$HN" ] || { echo 0; exit 0; }
+    grep -cE "^\s*(127\.0\.(0|1)\.1)\s+${HN}([[:space:]]|$)" /etc/hosts
   expected: 1
   expected_op: '>='
   sudo: false
@@ -1342,6 +1458,8 @@ os: linux
 arch:
 - amd64
 - arm64
+labels:
+- boot
 labels:
 - boot
 checksuites:
@@ -1391,9 +1509,14 @@ arch:
 - arm64
 labels:
 - boot
+labels:
+- boot
 checksuites:
 - id: 37-fs-04-bootloader-password
-  description: Verify the bootloader requires a password for single-user mode.
+  description: Verify the bootloader requires a password for single-user mode. Only applies to GRUB; skipped on systems
+    booting via systemd-boot or rEFInd (common on Arch, and increasingly offered as an option elsewhere), which have no
+    grub.cfg and use a different (currently unaudited) mechanism for boot entry protection.
+  requires_file: /boot/grub/grub.cfg
   command: |
     grep -i '^password_pbkdf2' /boot/grub/grub.cfg | wc -l
   expected: 1
@@ -1414,6 +1537,9 @@ os: linux
 arch:
 - amd64
 - arm64
+labels:
+- kernel
+- boot
 labels:
 - kernel
 - boot
@@ -1452,9 +1578,15 @@ arch:
 - arm64
 labels:
 - boot
+labels:
+- boot
 checksuites:
 - id: secure-boot-active
   description: Verify that UEFI Secure Boot is enabled and active, ensuring only signed code is executed during the boot process.
+    mokutil ships by default on Ubuntu/Fedora/RHEL-family but is an optional install on Debian, SUSE, and Arch. Only
+    meaningful on UEFI systems; BIOS/legacy-boot VMs are skipped cleanly.
+  requires_command: mokutil
+  requires_file: /sys/firmware/efi
   command: mokutil --sb-state | grep -cE 'SecureBoot\s+(is\s+)?enabled'
   expected: 1
   sudo: false
@@ -1473,7 +1605,12 @@ checksuites:
     will result in the system being unable to boot.
 - id: secure-boot-user-mode
   description: Verify that the system is operating in User Mode (not Setup Mode) to ensure that the cryptographic keys are
-    installed and enforcing the signing policy.
+    installed and enforcing the signing policy. Only meaningful on UEFI systems; BIOS/legacy-boot VMs are skipped
+    cleanly rather than reported as failures.
+  # /sys/firmware/efi only exists when booted in UEFI mode. bootctl is available
+  # everywhere systemd is installed but has nothing to report on BIOS.
+  requires_command: bootctl
+  requires_file: /sys/firmware/efi
   command: 'bootctl status | grep -c ''Setup Mode: no'''
   expected: 1
   sudo: false
@@ -1513,6 +1650,8 @@ arch:
 - arm64
 labels:
 - services
+labels:
+- services
 checksuites:
 - id: aide-package-installed
   description: Verify that the AIDE binary is present on the system for proactive file integrity monitoring.
@@ -1521,8 +1660,11 @@ checksuites:
   sudo: false
   fix: 'Manual action required: Install AIDE. Debian/Ubuntu: sudo apt install aide aide-common | RHEL/Rocky/Fedora: sudo
     dnf install -y aide | OpenSUSE: sudo zypper install -y aide | Arch: sudo pacman -S --noconfirm aide'
+  fix: 'Manual action required: Install AIDE. Debian/Ubuntu: sudo apt install aide aide-common | RHEL/Rocky/Fedora: sudo
+    dnf install -y aide | OpenSUSE: sudo zypper install -y aide | Arch: sudo pacman -S --noconfirm aide'
   fix_sudo: false
   affected_file: N/A
+  post_action: Run 'sudo aideinit' (Debian/Ubuntu) or 'sudo aide --init' (RHEL-family/Arch) to initialize the baseline database.
   post_action: Run 'sudo aideinit' (Debian/Ubuntu) or 'sudo aide --init' (RHEL-family/Arch) to initialize the baseline database.
   security_level: baseline
   risk_level: low
@@ -1552,6 +1694,8 @@ os: linux
 arch:
 - amd64
 - arm64
+labels:
+- boot
 labels:
 - boot
 checksuites:
@@ -1604,9 +1748,12 @@ arch:
 - arm64
 labels:
 - boot
+labels:
+- boot
 checksuites:
 - id: ctrl-alt-del-masked
   description: Verify that the Ctrl-Alt-Del reboot sequence is disabled by masking the systemd target.
+  command: systemctl is-enabled ctrl-alt-del.target 2>/dev/null | grep -cE '^masked$'
   command: systemctl is-enabled ctrl-alt-del.target 2>/dev/null | grep -cE '^masked$'
   expected: 1
   sudo: false
@@ -1625,6 +1772,8 @@ os: linux
 arch:
 - amd64
 - arm64
+labels:
+- boot
 labels:
 - boot
 checksuites:
@@ -1667,9 +1816,12 @@ arch:
 - arm64
 labels:
 - services
+labels:
+- services
 checksuites:
 - id: usbguard-service-active
   description: Verify that the USBGuard service is installed, enabled, and running to enforce USB device policies.
+  requires_command: usbguard
   requires_command: usbguard
   command: systemctl is-active usbguard
   expected: active
@@ -1705,6 +1857,8 @@ arch:
 - arm64
 labels:
 - auth
+labels:
+- auth
 checksuites:
 - id: 80-fs-09-path-writable
   description: Verify that standard system PATH directories are not globally writable by non-privileged users.
@@ -1728,10 +1882,13 @@ arch:
 - arm64
 labels:
 - filesystem
+labels:
+- filesystem
 checksuites:
 - id: 81-fs-10-umask-login-defs
   description: Verify that the default system-wide umask in /etc/login.defs is set to 027 or stricter.
   command: |
+    grep -E '^\s*UMASK\s+0(27|77)' /etc/login.defs | wc -l
     grep -E '^\s*UMASK\s+0(27|77)' /etc/login.defs | wc -l
   expected: 1
   sudo: false
@@ -1745,6 +1902,7 @@ checksuites:
 - id: 82-fs-11-umask-profile
   description: Verify that the umask for Bourne-style shells is set to 027 or stricter in /etc/profile.
   command: |
+    grep -E '^\s*umask\s+0(27|77)' /etc/profile | wc -l
     grep -E '^\s*umask\s+0(27|77)' /etc/profile | wc -l
   expected: 1
   expected_op: '>='
@@ -1765,6 +1923,8 @@ os: linux
 arch:
 - amd64
 - arm64
+labels:
+- filesystem
 labels:
 - filesystem
 checksuites:
@@ -1795,8 +1955,10 @@ checksuites:
 - id: 38-fs-05-sticky-bit
   description: Ensure the Sticky Bit is set on all world-writable directories.
   command: find / -xdev -type d \( -perm -0002 -a ! -perm -1000 \) | wc -l
+  command: find / -xdev -type d \( -perm -0002 -a ! -perm -1000 \) | wc -l
   expected: 0
   sudo: true
+  fix: find / -xdev -type d \( -perm -0002 -a ! -perm -1000 \) -exec chmod +t {} \;
   fix: find / -xdev -type d \( -perm -0002 -a ! -perm -1000 \) -exec chmod +t {} \;
   fix_sudo: true
   affected_file: Multiple Directories
@@ -1836,6 +1998,8 @@ os: linux
 arch:
 - amd64
 - arm64
+labels:
+- filesystem
 labels:
 - filesystem
 checksuites:
@@ -1878,6 +2042,8 @@ arch:
 - arm64
 labels:
 - kernel
+labels:
+- kernel
 checksuites:
 - id: proc-hidepid-configured
   description: Verify that the /proc filesystem is configured in /etc/fstab to use the 'hidepid=2' mount option to restrict
@@ -1916,6 +2082,8 @@ arch:
 - arm64
 labels:
 - filesystem
+labels:
+- filesystem
 checksuites:
 - id: suid-sgid-file-count
   description: Audit the number of files with the SUID or SGID permission bits set. This count must be monitored to detect
@@ -1938,10 +2106,18 @@ checksuites:
 - id: find-binary-not-suid
   description: Verify that the 'find' utility binary itself does not have the SUID bit set, preventing potential misuse during
     filesystem traversal.
-  command: stat -c '%a' $(which find) | grep -c '4'
+  # Use `command -v` (POSIX, unlike `which` which isn't always installed on Arch
+  # minimal), then test the SUID bit directly with `find -perm -4000` instead of
+  # the previous `grep -c '4'` which incorrectly counted any digit '4' in the mode.
+  command: |
+    fp=$(command -v find 2>/dev/null || echo /usr/bin/find)
+    [ -e "$fp" ] || { echo 0; exit 0; }
+    find "$fp" -perm -4000 2>/dev/null | wc -l
   expected: 0
   sudo: false
-  fix: sudo chmod u-s $(which find)
+  fix: |
+    fp=$(command -v find 2>/dev/null || echo /usr/bin/find)
+    sudo chmod u-s "$fp"
   fix_sudo: true
   affected_file: /usr/bin/find
   post_action: None
@@ -1957,6 +2133,8 @@ os: linux
 arch:
 - amd64
 - arm64
+labels:
+- filesystem
 labels:
 - filesystem
 checksuites:
@@ -1993,6 +2171,8 @@ os: linux
 arch:
 - amd64
 - arm64
+labels:
+- filesystem
 labels:
 - filesystem
 checksuites:
@@ -2032,6 +2212,8 @@ arch:
 - arm64
 labels:
 - filesystem
+labels:
+- filesystem
 checksuites:
 - id: pam-namespace-active
   description: Verify that the pam_namespace.so module is active in the session stack for local logins to initiate directory
@@ -2053,6 +2235,7 @@ checksuites:
   description: Verify that /tmp and /var/tmp are configured for user-based polyinstantiation in /etc/security/namespace.conf.
   command: |
     grep -cE '^/tmp\s+tmpfs\s+user\s+create' /etc/security/namespace.conf
+    grep -cE '^/tmp\s+tmpfs\s+user\s+create' /etc/security/namespace.conf
   expected: 1
   sudo: false
   fix: 'Manual action required: Add the required polyinstantiation lines to /etc/security/namespace.conf for /tmp and /var/tmp.'
@@ -2073,14 +2256,16 @@ arch:
 - arm64
 labels:
 - audit
+labels:
+- audit
 checksuites:
 - id: auditd-package-installed
   description: Verify that the auditd daemon binary is present, providing the Linux Auditing Framework.
   command: command -v auditd >/dev/null 2>&1 && echo 1 || echo 0
   expected: 1
   sudo: false
-  fix: 'Manual action required: Install auditd (e.g., on Debian/Ubuntu: sudo apt install auditd | on RHEL: sudo dnf install
-    audit)'
+  fix: 'Manual action required: Install auditd. Debian/Ubuntu: sudo apt install auditd | RHEL/Rocky/Fedora: sudo dnf
+    install -y audit | SUSE: sudo zypper install -y audit | Arch: sudo pacman -S --noconfirm audit'
   fix_sudo: false
   affected_file: N/A
   post_action: None
@@ -2090,6 +2275,7 @@ checksuites:
 - id: auditd-service-enabled
   description: Verify that the auditd service is enabled to ensure that the auditing framework starts automatically upon system
     boot.
+  requires_command: auditctl
   requires_command: auditctl
   command: systemctl is-enabled auditd
   expected: enabled
@@ -2103,6 +2289,7 @@ checksuites:
   risk_desc: Enabling the service is essential for persistent security monitoring and poses a minimal risk.
 - id: auditd-service-active
   description: Verify that the auditd service is currently running actively to ensure continuous security event logging.
+  requires_command: auditctl
   requires_command: auditctl
   command: systemctl is-active auditd
   expected: active
@@ -2124,6 +2311,8 @@ arch:
 - arm64
 labels:
 - audit
+labels:
+- audit
 checksuites:
 - id: audit-identity-file-changes
   description: Verify rules exist to monitor all write and attribute changes to critical identity files (/etc/passwd, /etc/shadow,
@@ -2132,6 +2321,11 @@ checksuites:
     grep -cE '^\s*-w\s+/etc/shadow\s+-p\s+wa' /etc/audit/rules.d/*.rules
   expected: 1
   sudo: false
+  distro:
+    debian:
+      command: |
+        grep -rcE '^\s*-w\s+/etc/shadow\s+-p\s+wa' /etc/audit/rules.d/
+      sudo: true
   distro:
     debian:
       command: |
@@ -2157,6 +2351,11 @@ checksuites:
       command: |
         grep -rcE '^\s*-a\s+always,exit\s+-F\s+path=/usr/bin/su' /etc/audit/rules.d/
       sudo: true
+  distro:
+    debian:
+      command: |
+        grep -rcE '^\s*-a\s+always,exit\s+-F\s+path=/usr/bin/su' /etc/audit/rules.d/
+      sudo: true
   fix: 'Manual action required: Add execution monitoring rules for /usr/bin/su and /usr/bin/sudo.'
   fix_sudo: true
   affected_file: /etc/audit/rules.d/90-identity.rules
@@ -2176,6 +2375,8 @@ arch:
 - arm64
 labels:
 - audit
+labels:
+- audit
 checksuites:
 - id: audit-file-attribute-changes
   description: Verify rules exist to monitor critical syscalls that modify file permissions and ownership (e.g., chmod, chown).
@@ -2183,6 +2384,11 @@ checksuites:
     grep -cE '^\s*-a\s+always,exit\s+-S\s+chmod' /etc/audit/rules.d/*.rules
   expected: 1
   sudo: false
+  distro:
+    debian:
+      command: |
+        grep -rcE '^\s*-a\s+always,exit\s+-S\s+chmod' /etc/audit/rules.d/
+      sudo: true
   distro:
     debian:
       command: |
@@ -2203,6 +2409,11 @@ checksuites:
     grep -cE '^\s*-a\s+always,exit\s+-S\s+unlink' /etc/audit/rules.d/*.rules
   expected: 1
   sudo: false
+  distro:
+    debian:
+      command: |
+        grep -rcE '^\s*-a\s+always,exit\s+-S\s+unlink' /etc/audit/rules.d/
+      sudo: true
   distro:
     debian:
       command: |
@@ -2241,6 +2452,8 @@ arch:
 - arm64
 labels:
 - audit
+labels:
+- audit
 checksuites:
 - id: audit-immutable-rule-config
   description: Verify that the mandatory rule to set the audit configuration to immutable is the last line in the ruleset.
@@ -2277,10 +2490,13 @@ arch:
 - arm64
 labels:
 - logging
+labels:
+- logging
 checksuites:
 - id: syslog-network-disabled
   description: Verify that the syslog daemon (e.g., rsyslog) is not listening on network ports (UDP 514, TCP 601) unless explicitly
     configured as a log collector.
+  command: ss -tuln | grep -cE '514|601'
   command: ss -tuln | grep -cE '514|601'
   expected: 0
   sudo: true
@@ -2294,30 +2510,26 @@ checksuites:
   risk_desc: Disabling network listening reduces attack surface and does not impact local logging functionality.
 - id: syslog-critical-file-permissions
   description: Verify that the primary security log file has restrictive permissions (0640 or tighter). The file path differs
-    by distro — /var/log/auth.log on Debian/Ubuntu, /var/log/secure on RHEL-family.
+    by distro — /var/log/auth.log on Debian/Ubuntu, /var/log/secure on RHEL-family, /var/log/messages on SUSE, and
+    either (or neither, if only journald is used) on Arch.
   command: stat -c '%a' /var/log/auth.log 2>/dev/null
   expected: 640
   expected_op: <=
   sudo: false
   distro:
-    rocky:
-      command: stat -c '%a' /var/log/secure 2>/dev/null
-      fix: sudo chmod 0640 /var/log/secure
     rhel:
       command: stat -c '%a' /var/log/secure 2>/dev/null
       fix: sudo chmod 0640 /var/log/secure
-    fedora:
-      command: stat -c '%a' /var/log/secure 2>/dev/null
-      fix: sudo chmod 0640 /var/log/secure
-    opensuse:
+    suse:
       command: stat -c '%a' /var/log/messages 2>/dev/null
       fix: sudo chmod 0640 /var/log/messages
-    archlinux:
+    arch:
       command: |
         if [ -f /var/log/auth.log ]; then stat -c '%a' /var/log/auth.log 2>/dev/null;
         elif [ -f /var/log/secure ]; then stat -c '%a' /var/log/secure 2>/dev/null;
         else echo 640; fi
-      fix: 'Manual action required: Restrict permissions on the syslog security log file if rsyslog is installed.'
+      fix: 'Manual action required: Arch ships no syslog daemon by default (journald only, no persistent auth.log/secure file).
+        If rsyslog or syslog-ng is installed, restrict permissions on whichever security log file it writes.'
   fix: sudo chmod 0640 /var/log/auth.log
   fix_sudo: true
   affected_file: /var/log/auth.log
@@ -2349,13 +2561,18 @@ arch:
 - arm64
 labels:
 - logging
+labels:
+- logging
 checksuites:
 - id: journald-persistent-storage
   description: Verify that journal storage is set to 'persistent' to retain forensic logs across reboots.
   command: grep -c '^Storage=persistent' /etc/systemd/journald.conf 2>/dev/null
   expected: '1'
+  command: grep -c '^Storage=persistent' /etc/systemd/journald.conf 2>/dev/null
+  expected: '1'
   sudo: false
   fix: |
+    sudo sed -i 's/^#\?Storage=.*/Storage=persistent/' /etc/systemd/journald.conf
     sudo sed -i 's/^#\?Storage=.*/Storage=persistent/' /etc/systemd/journald.conf
   fix_sudo: true
   affected_file: /etc/systemd/journald.conf
@@ -2364,6 +2581,9 @@ checksuites:
   risk_level: low
   risk_desc: Changing storage creates the /var/log/journal directory, which is necessary for forensic integrity.
 - id: journald-compression-enabled
+  description: Verify that log compression is not explicitly disabled (default is enabled).
+  command: grep -c '^Compress=no' /etc/systemd/journald.conf 2>/dev/null
+  expected: '0'
   description: Verify that log compression is not explicitly disabled (default is enabled).
   command: grep -c '^Compress=no' /etc/systemd/journald.conf 2>/dev/null
   expected: '0'
@@ -2400,12 +2620,17 @@ arch:
 - arm64
 labels:
 - services
+labels:
+- services
 checksuites:
 - id: cron_only_root_allowed
   description: Ensure that only the root user is allowed to schedule cron jobs by using a restrictive /etc/cron.allow file.
   command: if [ -f /etc/cron.allow ] && grep -q '^root$' /etc/cron.allow 2>/dev/null && [ ! -f /etc/cron.deny ]; then echo 1; else echo 0; fi
   expected: '1'
+  command: if [ -f /etc/cron.allow ] && grep -q '^root$' /etc/cron.allow 2>/dev/null && [ ! -f /etc/cron.deny ]; then echo 1; else echo 0; fi
+  expected: '1'
   sudo: true
+  fix: rm -f /etc/cron.deny; echo "root" > /etc/cron.allow; chmod 0640 /etc/cron.allow; chown root:root /etc/cron.allow
   fix: rm -f /etc/cron.deny; echo "root" > /etc/cron.allow; chmod 0640 /etc/cron.allow; chown root:root /etc/cron.allow
   fix_sudo: true
   affected_file: /etc/cron.allow
@@ -2418,7 +2643,10 @@ checksuites:
   description: Ensure that only the root user is allowed to schedule at jobs by using a restrictive /etc/at.allow file.
   command: if [ -f /etc/at.allow ] && grep -q '^root$' /etc/at.allow 2>/dev/null && [ ! -f /etc/at.deny ]; then echo 1; else echo 0; fi
   expected: '1'
+  command: if [ -f /etc/at.allow ] && grep -q '^root$' /etc/at.allow 2>/dev/null && [ ! -f /etc/at.deny ]; then echo 1; else echo 0; fi
+  expected: '1'
   sudo: true
+  fix: rm -f /etc/at.deny; echo "root" > /etc/at.allow; chmod 0640 /etc/at.allow; chown root:root /etc/at.allow
   fix: rm -f /etc/at.deny; echo "root" > /etc/at.allow; chmod 0640 /etc/at.allow; chown root:root /etc/at.allow
   fix_sudo: true
   affected_file: /etc/at.allow
@@ -2435,6 +2663,8 @@ os: linux
 arch:
 - amd64
 - arm64
+labels:
+- services
 labels:
 - services
 checksuites:
@@ -2486,6 +2716,8 @@ os: linux
 arch:
 - amd64
 - arm64
+labels:
+- auth
 labels:
 - auth
 checksuites:
