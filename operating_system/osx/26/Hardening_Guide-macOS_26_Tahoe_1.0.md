@@ -12,112 +12,102 @@ title: Hardening Guide
   - [Disclaimer on Intel-based Macs](#disclaimer-on-intel-based-macs)
 - [macOS System Security](#macos-system-security)
   - [Secure Boot](#secure-boot)
-          - [Startup Security for Intel-based Macs](#startup-security-for-intel-based-macs)
+          - [Startup Security for Apple Silicon-based Macs](#startup-security-for-apple-silicon-based-macs)
           - [Description](#description)
           - [Compliance Check](#compliance-check)
-          - [Implementation](#implementation)
-          - [Startup Security for Apple Silicon-based Macs](#startup-security-for-apple-silicon-based-macs)
+  - [Ensure System Integrity Protection Is Enabled](#ensure-system-integrity-protection-is-enabled)
           - [Description](#description-1)
           - [Compliance Check](#compliance-check-1)
-  - [Ensure System Integrity Protection Is Enabled](#ensure-system-integrity-protection-is-enabled)
+          - [Implementation](#implementation)
+  - [Ensure System Volume Is Read-Only](#ensure-system-volume-is-read-only)
           - [Description](#description-2)
           - [Compliance Check](#compliance-check-2)
           - [Implementation](#implementation-1)
-  - [Ensure System Volume Is Read-Only](#ensure-system-volume-is-read-only)
+  - [Enable Authenticated Root](#enable-authenticated-root)
           - [Description](#description-3)
           - [Compliance Check](#compliance-check-3)
           - [Implementation](#implementation-2)
-  - [Enable Authenticated Root](#enable-authenticated-root)
+  - [Gatekeeper](#gatekeeper)
           - [Description](#description-4)
           - [Compliance Check](#compliance-check-4)
           - [Implementation](#implementation-3)
-  - [Gatekeeper](#gatekeeper)
-          - [Description](#description-5)
-          - [Compliance Check](#compliance-check-5)
-          - [Implementation](#implementation-4)
-  - [Firmware Password (Intel-based Macs)](#firmware-password-intel-based-macs)
-          - [Set a Firmware Password](#set-a-firmware-password)
-          - [Compliance Check](#compliance-check-6)
-          - [Implementation](#implementation-5)
-          - [Disable Firmware Password Reset Capability](#disable-firmware-password-reset-capability)
-          - [Implementation](#implementation-6)
   - [FileVault](#filevault)
           - [Enable FileVault](#enable-filevault)
-          - [Compliance Check](#compliance-check-7)
+          - [Compliance Check](#compliance-check-5)
           - [Implementation via the Settings GUI:](#implementation-via-the-settings-gui)
           - [Implementation via the Command Line](#implementation-via-the-command-line)
     - [Restrict Users](#restrict-users)
-          - [Description](#description-6)
-          - [Compliance Check](#compliance-check-8)
-          - [Implementation](#implementation-7)
+          - [Description](#description-5)
+          - [Compliance Check](#compliance-check-6)
+          - [Implementation](#implementation-4)
   - [Disable System Diagnostic and Usage Data Reporting](#disable-system-diagnostic-and-usage-data-reporting)
-          - [Description](#description-7)
-          - [Compliance Check](#compliance-check-9)
-          - [Implementation](#implementation-8)
+          - [Description](#description-6)
+          - [Compliance Check](#compliance-check-7)
+          - [Implementation](#implementation-5)
   - [Lockdown Mode (Optional)](#lockdown-mode-optional)
-          - [Description](#description-8)
+          - [Description](#description-7)
           - [Technical Restrictions](#technical-restrictions)
-          - [Implementation](#implementation-9)
-          - [Compliance Check](#compliance-check-10)
+          - [Implementation](#implementation-6)
+          - [Compliance Check](#compliance-check-8)
   - [External Accessory](#external-accessory)
-          - [Description](#description-9)
-          - [Compliance Check](#compliance-check-11)
+          - [Description](#description-8)
+          - [Compliance Check](#compliance-check-9)
   - [Secure Enclave and Hardware-Security](#secure-enclave-and-hardware-security)
           - [Secure Enclave Architecture](#secure-enclave-architecture)
   - [Volume Ownership (Secure Token)](#volume-ownership-secure-token)
-          - [Description](#description-10)
-          - [Compliance Check](#compliance-check-12)
-          - [Implementation](#implementation-10)
+          - [Description](#description-9)
+          - [Compliance Check](#compliance-check-10)
+          - [Implementation](#implementation-7)
   - [System Extensions and Driver Management](#system-extensions-and-driver-management)
-          - [Description](#description-11)
+          - [Description](#description-10)
           - [Verifying Running System Extensions](#verifying-running-system-extensions)
-          - [Implementation](#implementation-11)
+          - [Implementation](#implementation-8)
   - [System Services \& Persistence (Daemon Management)](#system-services--persistence-daemon-management)
     - [System Services and Persistence](#system-services-and-persistence)
-          - [Description:](#description-12)
+          - [Description:](#description-11)
           - [Mandatory Policy:](#mandatory-policy)
       - [Service Directories \& Risk Context](#service-directories--risk-context)
       - [Auditing Active Services](#auditing-active-services)
-          - [Compliance Check](#compliance-check-13)
+          - [Compliance Check](#compliance-check-11)
           - [Verify Service Integrity:](#verify-service-integrity)
-          - [Implementation](#implementation-12)
+          - [Implementation](#implementation-9)
       - [Service State Monitoring](#service-state-monitoring)
-          - [Compliance Check:](#compliance-check-14)
-          - [Implementation:](#implementation-13)
+          - [Compliance Check:](#compliance-check-12)
+          - [Implementation:](#implementation-10)
 - [Authentication](#authentication)
   - [Users Privilege Separation](#users-privilege-separation)
   - [Ensure Password Security - Password Policy](#ensure-password-security---password-policy)
-          - [Description](#description-13)
-          - [Implementation](#implementation-14)
-          - [Compliance Check](#compliance-check-15)
+          - [Description](#description-12)
+          - [Implementation](#implementation-11)
+          - [Compliance Check](#compliance-check-13)
   - [Disable Automatic Login and User List](#disable-automatic-login-and-user-list)
-          - [Description](#description-14)
+          - [Description](#description-13)
           - [Compliance Check \& Implementation:](#compliance-check--implementation)
   - [Screensaver and Unlocking](#screensaver-and-unlocking)
-          - [Description](#description-15)
+          - [Description](#description-14)
           - [Compliance Check \& Implementation:](#compliance-check--implementation-1)
   - [Disable Touch ID \& Unlock with Apple Watch](#disable-touch-id--unlock-with-apple-watch)
-          - [Description](#description-16)
+          - [Description](#description-15)
           - [Configure Touch ID](#configure-touch-id)
           - [Disable Unlock with Apple Watch](#disable-unlock-with-apple-watch)
           - [Compliance Check \& Implementation:](#compliance-check--implementation-2)
   - [Disable Guest Accounts](#disable-guest-accounts)
     - [Disable the Guest Account](#disable-the-guest-account)
-          - [Description](#description-17)
-          - [Compliance Check](#compliance-check-16)
-          - [Implementation](#implementation-15)
+          - [Description](#description-16)
+          - [Compliance Check](#compliance-check-14)
+          - [Implementation](#implementation-12)
     - [Disable Guest Account Access to File Shares](#disable-guest-account-access-to-file-shares)
-          - [Description](#description-18)
+          - [Description](#description-17)
           - [Compliance Check \& Implementation:](#compliance-check--implementation-3)
   - [Restrict Sudoers File](#restrict-sudoers-file)
-          - [Description](#description-19)
-          - [Compliance Check](#compliance-check-17)
-          - [Implementation](#implementation-16)
+          - [Description](#description-18)
+          - [Compliance Check](#compliance-check-15)
+          - [Implementation](#implementation-13)
   - [Automatically Lock the Login Keychain (Optional)](#automatically-lock-the-login-keychain-optional)
-          - [Description](#description-20)
+          - [Description](#description-19)
           - [Compliance Check \& Implementation:](#compliance-check--implementation-4)
   - [Require Administrator Password](#require-administrator-password)
-          - [Description](#description-21)
+          - [Description](#description-20)
           - [Compliance Check \& Implementation:](#compliance-check--implementation-5)
   - [Login Items](#login-items)
           - [Description \& Implementation:](#description--implementation)
@@ -126,150 +116,150 @@ title: Hardening Guide
           - [Disable Keychain iCloud Sync](#disable-keychain-icloud-sync)
           - [TOTP on Different Devices](#totp-on-different-devices)
   - [Passkeys and FIDO2 Hardening](#passkeys-and-fido2-hardening)
-          - [Description](#description-22)
+          - [Description](#description-21)
           - [Disallow Synchronization of Credentials](#disallow-synchronization-of-credentials)
           - [Enforce Touch ID/Face ID for Passkey Use](#enforce-touch-idface-id-for-passkey-use)
-          - [Compliance Check](#compliance-check-18)
-          - [Implementation](#implementation-17)
+          - [Compliance Check](#compliance-check-16)
+          - [Implementation](#implementation-14)
   - [Touch ID for Sudo (Optional)](#touch-id-for-sudo-optional)
-          - [Description](#description-23)
-          - [Compliance Check](#compliance-check-19)
+          - [Description](#description-22)
+          - [Compliance Check](#compliance-check-17)
           - [Verifying System Integrity](#verifying-system-integrity)
-          - [Implementation](#implementation-18)
+          - [Implementation](#implementation-15)
 - [Updates \& Time](#updates--time)
   - [Operating System Updates](#operating-system-updates)
           - [Ensure All Apple-provided Software Is Current](#ensure-all-apple-provided-software-is-current)
-          - [Compliance Check](#compliance-check-20)
-          - [Implementation](#implementation-19)
+          - [Compliance Check](#compliance-check-18)
+          - [Implementation](#implementation-16)
           - [Enable Automatic Updates](#enable-automatic-updates)
-          - [Compliance Check](#compliance-check-21)
+          - [Compliance Check](#compliance-check-19)
           - [Manual Implementation (Alternative):](#manual-implementation-alternative)
           - [Modify Update Frequency](#modify-update-frequency)
-          - [Compliance Check](#compliance-check-22)
-          - [Implementation](#implementation-20)
+          - [Compliance Check](#compliance-check-20)
+          - [Implementation](#implementation-17)
   - [Enable Network Time Synchronization via NTP](#enable-network-time-synchronization-via-ntp)
-          - [Description](#description-24)
-          - [Compliance Check](#compliance-check-23)
-          - [Implementation](#implementation-21)
+          - [Description](#description-23)
+          - [Compliance Check](#compliance-check-21)
+          - [Implementation](#implementation-18)
 - [Secure Storage of Data \& Backups](#secure-storage-of-data--backups)
   - [Time Machine Backups](#time-machine-backups)
           - [Enable Time Machine for Local Devices](#enable-time-machine-for-local-devices)
           - [Encrypt Local Backups](#encrypt-local-backups)
           - [Compliance Check \& Implementation:](#compliance-check--implementation-6)
     - [Disable Automatic Prompt](#disable-automatic-prompt)
-          - [Compliance Check](#compliance-check-24)
-          - [Implementation](#implementation-22)
+          - [Compliance Check](#compliance-check-22)
+          - [Implementation](#implementation-19)
   - [Finder: Show All File Extensions](#finder-show-all-file-extensions)
-          - [Compliance Check](#compliance-check-25)
-          - [Implementation](#implementation-23)
+          - [Compliance Check](#compliance-check-23)
+          - [Implementation](#implementation-20)
   - [Disable Creation of Metadata Files](#disable-creation-of-metadata-files)
-          - [Compliance Check](#compliance-check-26)
-          - [Implementation](#implementation-24)
+          - [Compliance Check](#compliance-check-24)
+          - [Implementation](#implementation-21)
   - [Setuid and Setgid](#setuid-and-setgid)
   - [Set Strict Global Umask (Optional)](#set-strict-global-umask-optional)
 - [Network Communication Hardening \& Privacy](#network-communication-hardening--privacy)
   - [Enable macOS Firewall](#enable-macos-firewall)
           - [Application Firewall](#application-firewall)
-          - [Compliance Check](#compliance-check-27)
-          - [Implementation](#implementation-25)
+          - [Compliance Check](#compliance-check-25)
+          - [Implementation](#implementation-22)
     - [Packet Filter (Optional)](#packet-filter-optional)
-          - [Compliance Check](#compliance-check-28)
-          - [Implementation](#implementation-26)
+          - [Compliance Check](#compliance-check-26)
+          - [Implementation](#implementation-23)
   - [Disable Power Nap and Network Wake](#disable-power-nap-and-network-wake)
-          - [Description](#description-25)
-          - [Compliance Check](#compliance-check-29)
-          - [Implementation](#implementation-27)
+          - [Description](#description-24)
+          - [Compliance Check](#compliance-check-27)
+          - [Implementation](#implementation-24)
   - [Disable Handoff \& Universal Control (Optional)](#disable-handoff--universal-control-optional)
     - [Disable Handoff](#disable-handoff)
-          - [Compliance Check](#compliance-check-30)
-          - [Implementation](#implementation-28)
+          - [Compliance Check](#compliance-check-28)
+          - [Implementation](#implementation-25)
     - [Disable Universal Control](#disable-universal-control)
   - [Change Computer-/Hostname](#change-computer-hostname)
-          - [Description](#description-26)
-          - [Implementation](#implementation-29)
-          - [Compliance Check](#compliance-check-31)
+          - [Description](#description-25)
+          - [Implementation](#implementation-26)
+          - [Compliance Check](#compliance-check-29)
   - [Restrict AirDrop Discoverability](#restrict-airdrop-discoverability)
-          - [Description](#description-27)
-          - [Compliance Check](#compliance-check-32)
-          - [Implementation](#implementation-30)
+          - [Description](#description-26)
+          - [Compliance Check](#compliance-check-30)
+          - [Implementation](#implementation-27)
           - [Implementation Disable the AirDrop Daemon (Optional)](#implementation-disable-the-airdrop-daemon-optional)
   - [Disable Network Services \& Sharing](#disable-network-services--sharing)
           - [Disable Screen Sharing](#disable-screen-sharing)
-          - [Compliance Check](#compliance-check-33)
-          - [Implementation](#implementation-31)
+          - [Compliance Check](#compliance-check-31)
+          - [Implementation](#implementation-28)
           - [Disable File Sharing](#disable-file-sharing)
-          - [Compliance Check](#compliance-check-34)
-          - [Implementation](#implementation-32)
+          - [Compliance Check](#compliance-check-32)
+          - [Implementation](#implementation-29)
           - [Disable Printer Sharing](#disable-printer-sharing)
-          - [Compliance Check](#compliance-check-35)
-          - [Implementation](#implementation-33)
+          - [Compliance Check](#compliance-check-33)
+          - [Implementation](#implementation-30)
           - [Disable Remote Login](#disable-remote-login)
-          - [Compliance Check](#compliance-check-36)
-          - [Implementation](#implementation-34)
+          - [Compliance Check](#compliance-check-34)
+          - [Implementation](#implementation-31)
           - [Disable Remote Management](#disable-remote-management)
-          - [Compliance Check](#compliance-check-37)
-          - [Implementation](#implementation-35)
+          - [Compliance Check](#compliance-check-35)
+          - [Implementation](#implementation-32)
           - [Disable Remote AppleEvents](#disable-remote-appleevents)
-          - [Description](#description-28)
-          - [Compliance Check](#compliance-check-38)
-          - [Implementation](#implementation-36)
+          - [Description](#description-27)
+          - [Compliance Check](#compliance-check-36)
+          - [Implementation](#implementation-33)
           - [Disable Content Caching](#disable-content-caching)
-          - [Compliance Check](#compliance-check-39)
-          - [Implementation](#implementation-37)
+          - [Compliance Check](#compliance-check-37)
+          - [Implementation](#implementation-34)
           - [Disable Media Sharing](#disable-media-sharing)
-          - [Compliance Check](#compliance-check-40)
-          - [Implementation](#implementation-38)
+          - [Compliance Check](#compliance-check-38)
+          - [Implementation](#implementation-35)
           - [Legacy \& Services](#legacy--services)
-          - [Compliance Check](#compliance-check-41)
-          - [Implementation](#implementation-39)
+          - [Compliance Check](#compliance-check-39)
+          - [Implementation](#implementation-36)
           - [Regular Service Auditing and Minimization Principle](#regular-service-auditing-and-minimization-principle)
   - [Restrict iCloud Services](#restrict-icloud-services)
           - [Mandatory (All Devices)](#mandatory-all-devices)
           - [Mandatory on Managed Enterprise Endpoints, Optional Elsewhere](#mandatory-on-managed-enterprise-endpoints-optional-elsewhere)
-          - [Implementation](#implementation-40)
-          - [Compliance Check](#compliance-check-42)
+          - [Implementation](#implementation-37)
+          - [Compliance Check](#compliance-check-40)
           - [Note on iCloud Private Relay](#note-on-icloud-private-relay)
   - [Disable Proximity Based Password Sharing](#disable-proximity-based-password-sharing)
   - [Disable AirPlay Receiver (Optional, Mandatory on Company Devices)](#disable-airplay-receiver-optional-mandatory-on-company-devices)
-          - [Description](#description-29)
-          - [Implementation](#implementation-41)
-          - [Compliance Check](#compliance-check-43)
+          - [Description](#description-28)
+          - [Implementation](#implementation-38)
+          - [Compliance Check](#compliance-check-41)
   - [Restrict SSH Client Ciphers and Algorithms](#restrict-ssh-client-ciphers-and-algorithms)
-          - [Description](#description-30)
+          - [Description](#description-29)
   - [Privacy, Permissions \& Location Services](#privacy-permissions--location-services)
           - [Apple Intelligence \& Analytics](#apple-intelligence--analytics)
           - [Turn Off Apple Intelligence Report](#turn-off-apple-intelligence-report)
-          - [Implementation](#implementation-42)
+          - [Implementation](#implementation-39)
           - [Privacy Permissions Review](#privacy-permissions-review)
           - [Review Procedure](#review-procedure)
           - [Location Services Configuration](#location-services-configuration)
           - [High Security Policy (Optional)](#high-security-policy-optional)
-          - [Compliance Check](#compliance-check-44)
+          - [Compliance Check](#compliance-check-42)
           - [Manual Implementation](#manual-implementation)
   - [Post-Quantum Cryptography (PQC)](#post-quantum-cryptography-pqc)
           - [Enforcing Quantum Security](#enforcing-quantum-security)
-          - [Compliance Check](#compliance-check-45)
-          - [Implementation](#implementation-43)
+          - [Compliance Check](#compliance-check-43)
+          - [Implementation](#implementation-40)
   - [Apple Intelligence \& Siri (Optional, Mandatory on Company Systems Handling Sensitive Data)](#apple-intelligence--siri-optional-mandatory-on-company-systems-handling-sensitive-data)
           - [Disable Siri](#disable-siri)
-          - [Compliance Check](#compliance-check-46)
+          - [Compliance Check](#compliance-check-44)
           - [Disable Apple Intelligence](#disable-apple-intelligence)
-          - [Compliance Check](#compliance-check-47)
+          - [Compliance Check](#compliance-check-45)
 - [Application \& Software Integrity](#application--software-integrity)
   - [Software Management and Third-Party Sources](#software-management-and-third-party-sources)
           - [Software Management and Third-Party Sources](#software-management-and-third-party-sources-1)
           - [Privilege Avoidance (TCC Audit)](#privilege-avoidance-tcc-audit)
-          - [Compliance Check](#compliance-check-48)
-          - [Implementation](#implementation-44)
+          - [Compliance Check](#compliance-check-46)
+          - [Implementation](#implementation-41)
   - [XProtect \& Malware Remediation](#xprotect--malware-remediation)
-          - [Description:](#description-31)
-          - [Compliance Check](#compliance-check-49)
-          - [Implementation](#implementation-45)
+          - [Description:](#description-30)
+          - [Compliance Check](#compliance-check-47)
+          - [Implementation](#implementation-42)
   - [Application Sandboxing](#application-sandboxing)
-          - [Description](#description-32)
-          - [Compliance Check](#compliance-check-50)
+          - [Description](#description-31)
+          - [Compliance Check](#compliance-check-48)
           - [Audit of Sandbox Exceptions](#audit-of-sandbox-exceptions)
-          - [Implementation](#implementation-46)
+          - [Implementation](#implementation-43)
 - [Additional Security Hardening](#additional-security-hardening)
   - [SSH Secret Management](#ssh-secret-management)
     - [Use of Host-Specific Keys and Config](#use-of-host-specific-keys-and-config)
@@ -278,6 +268,17 @@ title: Hardening Guide
     - [Creating a Secure Disk Image via Disk Utility](#creating-a-secure-disk-image-via-disk-utility)
     - [Creating a Secure Disk Image via Terminal](#creating-a-secure-disk-image-via-terminal)
     - [Mounting a Secure Disk Image](#mounting-a-secure-disk-image)
+- [Intel-based Macs (Legacy)](#intel-based-macs-legacy)
+  - [Startup Security for Intel-based Macs (T2 Security Chip)](#startup-security-for-intel-based-macs-t2-security-chip)
+          - [Description](#description-32)
+          - [Compliance Check](#compliance-check-49)
+          - [Implementation](#implementation-44)
+  - [Firmware Password (Intel-based Macs)](#firmware-password-intel-based-macs)
+          - [Set a Firmware Password](#set-a-firmware-password)
+          - [Compliance Check](#compliance-check-50)
+          - [Implementation](#implementation-45)
+          - [Disable Firmware Password Reset Capability](#disable-firmware-password-reset-capability)
+          - [Implementation](#implementation-46)
 
 # Introduction
 
@@ -322,30 +323,10 @@ This section describes essential macOS system security and integrity mechanisms.
 
 In this section, the security settings for the secure boot of a Mac are detailed. Consult *Mac models with the Apple T2 Security Chip*[^2] and *Mac computers with Apple Silicon*[^3] to learn which Mac computers have either the Apple T2 Security Chip or Apple Silicon chip. Intel Macs had a built-in T2 chip that handled security and other features on the Macs, but with the M1 chips, that functionality is built right in, and a second chip is not required.
 
-###### Startup Security for Intel-based Macs
-
-MacBook models (with Intel processor) since 2018 support secure boot through their included T2 chip inside the *TouchBar* including the Secure Enclave.
-
-###### Description
-
-The Mac needs to be booted with the Command and R key pressed to check if Secure Boot is enabled[^4]. After entering the Firmware Password or authenticating with FileVault users, it is possible to access the *Startup Security Utility* in the Menu bar. If the MacBook contains a T2 Chip (*TouchBar*), it is possible to see the options for *Secure Boot* and *External Boot*. It is highly recommended to have *Secure Boot* on Full Security and *External Boot* on Disallow booting from external media. For more information about these settings, see *About Startup Security Utility on a Mac with the Apple T2 Security Chip*[^5].
-
-*Full security* is the default Secure Boot setting in macOS. During startup, when Secure Boot is set to *Full Security*, the Mac will verify the integrity of the operating system before allowing the operating system to boot.
-
-###### Compliance Check
-
-To check the settings of secure boot, run the following command. Please note that this will only return an accurate result on a T2 or Intel Macs. The subsequent output is returned from a MacBook Pro (15-inch, 2018) with a T2 chip. The settings MUST be adjusted to these values to ensure system security.
-
-    > sudo /usr/libexec/mdmclient QuerySecurityInfo | grep "SecureBoot =" -A 4
-    SecureBoot = {
-     ExternalBootLevel = disallowed;
-     SecureBootLevel = full;
-     WindowsBootLevel = disallowed;
-    };
-
-###### Implementation
-
-Boot the Mac with the Command and R key pressed. Enter the Firmware Password or authenticate with a FileVault user. Access the *Startup Security Utility* in the Menu bar. Set the options for *Secure Boot* to *Full Security* and *External Boot* to *Disallow*.
+> **Note:** Guidance for Intel-based Macs with the T2 Security Chip, both Secure Boot and the Firmware Password, has moved
+> to [Intel-based Macs (Legacy)](#intel-based-macs-legacy) at the end of this document. macOS 26 Tahoe is the last release
+> to support Intel hardware, so that guidance remains fully relevant for the Intel Macs still running it, it has just been
+> moved out of the main flow since it does not apply to the Apple Silicon hardware most readers now run.
 
 ###### Startup Security for Apple Silicon-based Macs
 
@@ -490,53 +471,6 @@ This setting can be verified with the following command, which MUST return both 
 Enable Gatekeeper by running the following command:
 
     sudo spctl --master-enable
-
-## Firmware Password (Intel-based Macs)
-
-Mac computers with Intel CPU use a Firmware Password to prevent unintended modifications of firmware settings on a specific Mac. For the equivalent level of security on a Mac with Apple Silicon, turn on FileVault.[^13] The firmware password is not required on a Mac with Apple Silicon SOCs, because the critical firmware functionality has been moved into the recoveryOS and (when FileVault is enabled) recoveryOS requires user authentication before its critical functionality can be reached.[^14] Apple Silicon Macs support setting a recoveryOS password MDM[^15]. We will not handle this option in this guide.
-
-###### Set a Firmware Password
-
-A sufficiently complex firmware password MUST be set to prevent Single User Mode and bootable devices. Setting a Firmware Password is especially important to reduce the risk of attacks on Intel-based Mac computers without a T2 chip from physically present attackers. The Firmware Password can help prevent attackers from booting to recoveryOS, from where they could otherwise disable System Integrity Protection (SIP). And by restricting boot of alternative media, attackers cannot execute privileged code from another operating system to attack peripheral firmware.[^16]
-
-Forgetting this password can render the Mac completely unavailable and prevent it from booting. Hence, a password manager storing this password can be a solution. Further, when trying to access a firmware secured part regardless of the real keyboard layout of the MacBook, the English default setting will always be mapped.
-
-If firmware password or passcode is forgotten, the only way to reset the forgotten password is to use a machine-specific binary generated and provided by Apple. Schedule a support call, and provide proof of purchase before the firmware binary will be generated.
-
-###### Compliance Check
-
-Check whether a firmware password is set by running the following command. On Apple Silicon devices the command will lead to an error that indicates that the firmware on the machine is not supported.
-
-    > sudo /usr/sbin/firmwarepasswd -check
-    Password Enabled: Yes
-
-###### Implementation
-
-To set a firmware password:
-
-- Boot your Mac into Recovery Mode by pressing Command + R as your Mac is booting.
-- Select Utilities → Firmware Password Utility
-- Set an adequate complex Password, that MUST fulfill the following requirements:
-  - MUST have a minimum password length of at least 32 characters
-  - Password MUST consist of at least one character of each character group (letters, numbers, special characters)
-  - MUST NOT contain any default passwords
-  - MUST consist of at least six different characters
-
-> **NOTE:** *The Firmware Password MUST be stored at a safe place to enable hardware recovery before disabling the capability.*
-
-###### Disable Firmware Password Reset Capability
-
-For users who want no one but themselves to remove their firmware password by software means, the `-disable-reset-capability` option has been added to the `firmwarepasswd` command-line tool in macOS 10.15.
-
-> **NOTE:** *The Firmware Password MUST be stored at a safe place to enable hardware recovery before disabling the capability.*
-
-###### Implementation
-
-To disable the firmware password reset capability by Apple run:
-
-    sudo firmwarepasswd -disable-reset-capability
-
-It is possible to re-enable the password reset capability using the `-enable-reset-capability` command.
 
 ## FileVault
 
@@ -2996,6 +2930,82 @@ The image can be inspected with the `hdiutil imageinfo <image>.dmg` command whic
 Click on the encrypted disk image (`.dmg`) to start mounting. A password prompt appears. Enter the password and click on OK. *Remember password in my keychain* MUST be unchecked. Checking that box will allow macOS to automatically mount the image *without* prompting for the password.
 
 The disk image will be mounted and available on the desktop with the name specified when creating the disk image. The files in the disk image can be used as every other regular directory or file present on the macOS file system.
+
+# Intel-based Macs (Legacy)
+
+macOS 26 Tahoe is the last major macOS release to support Intel-based Mac hardware ([Disclaimer on Intel-based Macs](#disclaimer-on-intel-based-macs)); the next major release runs exclusively on Apple Silicon. This means Intel Macs still on Tahoe are permanently on this release going forward, receiving security-only patches with no further feature or major-version updates ever again. The guidance in this appendix therefore remains fully relevant for as long as those machines are in active use; it has simply been moved out of the main hardening flow, since it does not apply to the Apple Silicon hardware most readers now run.
+
+## Startup Security for Intel-based Macs (T2 Security Chip)
+
+MacBook models (with Intel processor) since 2018 support secure boot through their included T2 chip inside the *TouchBar* including the Secure Enclave.
+
+###### Description
+
+The Mac needs to be booted with the Command and R key pressed to check if Secure Boot is enabled[^4]. After entering the Firmware Password or authenticating with FileVault users, it is possible to access the *Startup Security Utility* in the Menu bar. If the MacBook contains a T2 Chip (*TouchBar*), it is possible to see the options for *Secure Boot* and *External Boot*. It is highly recommended to have *Secure Boot* on Full Security and *External Boot* on Disallow booting from external media. For more information about these settings, see *About Startup Security Utility on a Mac with the Apple T2 Security Chip*[^5].
+
+*Full security* is the default Secure Boot setting in macOS. During startup, when Secure Boot is set to *Full Security*, the Mac will verify the integrity of the operating system before allowing the operating system to boot.
+
+###### Compliance Check
+
+To check the settings of secure boot, run the following command. Please note that this will only return an accurate result on a T2 or Intel Macs. The subsequent output is returned from a MacBook Pro (15-inch, 2018) with a T2 chip. The settings MUST be adjusted to these values to ensure system security.
+
+    > sudo /usr/libexec/mdmclient QuerySecurityInfo | grep "SecureBoot =" -A 4
+    SecureBoot = {
+     ExternalBootLevel = disallowed;
+     SecureBootLevel = full;
+     WindowsBootLevel = disallowed;
+    };
+
+###### Implementation
+
+Boot the Mac with the Command and R key pressed. Enter the Firmware Password or authenticate with a FileVault user. Access the *Startup Security Utility* in the Menu bar. Set the options for *Secure Boot* to *Full Security* and *External Boot* to *Disallow*.
+
+## Firmware Password (Intel-based Macs)
+
+Mac computers with Intel CPU use a Firmware Password to prevent unintended modifications of firmware settings on a specific Mac. For the equivalent level of security on a Mac with Apple Silicon, turn on FileVault.[^13] The firmware password is not required on a Mac with Apple Silicon SOCs, because the critical firmware functionality has been moved into the recoveryOS and (when FileVault is enabled) recoveryOS requires user authentication before its critical functionality can be reached.[^14] Apple Silicon Macs support setting a recoveryOS password MDM[^15]. We will not handle this option in this guide.
+
+###### Set a Firmware Password
+
+A sufficiently complex firmware password MUST be set to prevent Single User Mode and bootable devices. Setting a Firmware Password is especially important to reduce the risk of attacks on Intel-based Mac computers without a T2 chip from physically present attackers. The Firmware Password can help prevent attackers from booting to recoveryOS, from where they could otherwise disable System Integrity Protection (SIP). And by restricting boot of alternative media, attackers cannot execute privileged code from another operating system to attack peripheral firmware.[^16]
+
+Forgetting this password can render the Mac completely unavailable and prevent it from booting. Hence, a password manager storing this password can be a solution. Further, when trying to access a firmware secured part regardless of the real keyboard layout of the MacBook, the English default setting will always be mapped.
+
+If firmware password or passcode is forgotten, the only way to reset the forgotten password is to use a machine-specific binary generated and provided by Apple. Schedule a support call, and provide proof of purchase before the firmware binary will be generated.
+
+###### Compliance Check
+
+Check whether a firmware password is set by running the following command. On Apple Silicon devices the command will lead to an error that indicates that the firmware on the machine is not supported.
+
+    > sudo /usr/sbin/firmwarepasswd -check
+    Password Enabled: Yes
+
+###### Implementation
+
+To set a firmware password:
+
+- Boot your Mac into Recovery Mode by pressing Command + R as your Mac is booting.
+- Select Utilities → Firmware Password Utility
+- Set an adequate complex Password, that MUST fulfill the following requirements:
+  - MUST have a minimum password length of at least 32 characters
+  - Password MUST consist of at least one character of each character group (letters, numbers, special characters)
+  - MUST NOT contain any default passwords
+  - MUST consist of at least six different characters
+
+> **NOTE:** *The Firmware Password MUST be stored at a safe place to enable hardware recovery before disabling the capability.*
+
+###### Disable Firmware Password Reset Capability
+
+For users who want no one but themselves to remove their firmware password by software means, the `-disable-reset-capability` option has been added to the `firmwarepasswd` command-line tool in macOS 10.15.
+
+> **NOTE:** *The Firmware Password MUST be stored at a safe place to enable hardware recovery before disabling the capability.*
+
+###### Implementation
+
+To disable the firmware password reset capability by Apple run:
+
+    sudo firmwarepasswd -disable-reset-capability
+
+It is possible to re-enable the password reset capability using the `-enable-reset-capability` command.
 
 [^1]: Keywords for use in RFCs to Indicate Requirement Levels: <https://datatracker.ietf.org/doc/html/rfc2119>
 

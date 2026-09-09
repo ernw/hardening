@@ -6,62 +6,17 @@ preconditions:
 
 ---
 
-title: Secure Boot
+title: Secure Boot (Apple Silicon)
 os: darwin
 arch:
 - arm64
-- amd64
 labels:
 - boot
 checksuites:
-- id: external-boot-disallowed-check
-  description: Ensures booting from external media is disallowed to prevent bypassing local security controls and unauthorized
-    data access.
-  command: /usr/libexec/mdmclient QuerySecurityInfo | grep -c  'ExternalBootLevel = disallowed;'
-  expected: 1
-  sudo: true
-  fix: 'Manual action required: Set External Boot to "Disallowed" in Startup Security Utility (requires Recovery Mode).'
-  fix_sudo: true
-  affected_file: N/A
-  post_action: Restart Mac and enter Recovery Mode (press and hold Power button during startup on Apple Silicon) -> Utilities
-    -> Startup Security Utility. Select the desired volume and configure the security policy.
-  security_level: high
-  risk_level: low
-  risk_desc: The remediation is manual and involves changing a low-level security setting. The risk is primarily that the
-    user will be unable to boot from a legitimate external maintenance or recovery drive if needed.
-- id: secure-boot-full-check
-  description: Verifies that the highest security setting, Full Security, is active to ensure the OS is validated by Apple's
-    signature, protecting against unauthorized kernel extensions and OS changes.
-  command: /usr/libexec/mdmclient QuerySecurityInfo | grep -c  'SecureBootLevel = full;'
-  expected: 1
-  sudo: true
-  fix: 'Manual action required: Set Secure Boot to "Full Security" in Startup Security Utility (requires Recovery Mode).'
-  fix_sudo: true
-  affected_file: N/A
-  post_action: Restart Mac and enter Recovery Mode (press and hold Power button during startup on Apple Silicon) -> Utilities
-    -> Startup Security Utility. Select the desired volume and configure the security policy.
-  security_level: high
-  risk_level: low
-  risk_desc: The remediation is manual and involves changing a core boot security setting. Setting to 'Full Security' may
-    prevent booting into older or unverified macOS versions or non-Apple operating systems.
-- id: windows-boot-disallowed-check
-  description: Ensures that Windows is disallowed as a boot option (if not explicitly required) to reduce the attack surface
-    and maintain control over the boot process.
-  command: /usr/libexec/mdmclient QuerySecurityInfo | grep -c  'WindowsBootLevel = disallowed;'
-  expected: 1
-  sudo: true
-  fix: 'Manual action required: Configure Windows Boot to "Disallowed" via MDM profile or equivalent security settings if
-    applicable.'
-  fix_sudo: true
-  affected_file: SecurityInfo/MDM Configuration
-  post_action: No direct user action via CLI. Review MDM configuration or consider manually removing any Windows partitions.
-  security_level: baseline
-  risk_level: low
-  risk_desc: The remediation is manual/MDM-based. The risk is that if Windows is required for dual-boot functionality, it
-    will be rendered unusable. The setting can be easily reversed if needed.
 - id: bputil-smb0-full-security-check
   description: Checks the status of the 'smb0' setting (Secure Boot Policy) via bputil on Apple Silicon Macs (arm64), expecting
-    'Full Security' (represented by 'Full'). This is a low-level check for the highest boot security.
+    'Full Security' (represented by 'Full'). This is a low-level check for the highest boot security. Apple Silicon only;
+    bputil reports "not yet supported on this platform" when run on Intel.
   command: sudo bputil -d | grep '(smb0)' | grep -c 'Full'
   expected: 1
   sudo: true
@@ -193,33 +148,6 @@ checksuites:
   risk_level: very low
   risk_desc: The fix is a standard system-level policy restore and is immediate. The risk is minimal, as it only restores
     default Gatekeeper behavior, which may only disrupt the installation of unsigned/unapproved applications.
-
----
-
-title: Firmware Password (Intel-based Macs)
-os: darwin
-arch:
-- arm64
-- amd64
-labels:
-- boot
-checksuites:
-- id: firmware-password-enabled
-  description: Checks if a firmware password is set, which prevents unauthorized users from booting from any internal or external
-    drive other than the designated startup disk.
-  command: '/usr/sbin/firmwarepasswd -check |grep -c ''Password Enabled: Yes'''
-  expected: 1
-  sudo: true
-  fix: 'Manual action required: Set a strong firmware password in Recovery Mode: sudo firmwarepasswd -setpasswd'
-  fix_sudo: true
-  affected_file: N/A
-  post_action: 'Restart Mac and enter Recovery Mode (Cmd+R on Intel, press and hold Power button on Apple Silicon) to set
-    the password. **NOTE**: Do not lose this password, as it requires a visit to Apple for recovery.'
-  security_level: high
-  risk_level: high
-  risk_desc: The remediation is manual. The risk is high only in the event of a forgotten password. Losing the firmware password
-    requires physical access to an Apple Store or authorized service provider to remove, effectively locking the user out
-    of the system's boot options.
 
 ---
 
@@ -1022,11 +950,11 @@ checksuites:
   risk_desc: The automated fix restores Apple's default. No meaningful risk; this trades a theoretical prompt-everything
     posture for practical daily usability without giving up third-party application gating.
 - id: firewall-auto-allow-downloaded-disabled
-  description: Ensures 'Automatically allow downloaded software' is DISABLED. This enforces explicit approval for all third-party
-    software, which is the control that actually matters (unknown, third-party listeners rather than Apple's own signed
-    binaries).
-  command: /usr/libexec/ApplicationFirewall/socketfilterfw --getallowsigned |grep -c 'Automatically allow downloaded software
-    DISABLED'
+  description: Ensures 'Automatically allow downloaded signed software' is DISABLED. This enforces explicit approval for
+    all third-party software, which is the control that actually matters (unknown, third-party listeners rather than Apple's
+    own signed binaries).
+  command: /usr/libexec/ApplicationFirewall/socketfilterfw --getallowsigned |grep -c 'Automatically allow downloaded signed
+    software DISABLED'
   expected: 1
   sudo: false
   fix: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsignedapp off
@@ -1947,3 +1875,92 @@ checksuites:
   risk_level: low
   risk_desc: The remediation is manual/MDM based, so there is no risk of automated breakage. Failure to install the required
     root certificate will **break secure access (TLS/SSL) to all internal systems** relying on this CA.
+
+---
+
+# ===== Intel-based Macs (Legacy) =====
+# macOS 26 Tahoe is the last release to support Intel hardware.
+# These documents are arch-scoped (arch: [amd64]) and only run on Intel Macs.
+# See guide.md "Intel-based Macs (Legacy)" for the corresponding prose.
+title: Secure Boot (Intel T2)
+os: darwin
+arch:
+- amd64
+labels:
+- boot
+checksuites:
+- id: external-boot-disallowed-check
+  description: Ensures booting from external media is disallowed to prevent bypassing local security controls and unauthorized
+    data access. Intel/T2 only; queried via mdmclient, which does not report this on Apple Silicon.
+  command: /usr/libexec/mdmclient QuerySecurityInfo | grep -c  'ExternalBootLevel = disallowed;'
+  expected: 1
+  sudo: true
+  fix: 'Manual action required: Set External Boot to "Disallowed" in Startup Security Utility (requires Recovery Mode).'
+  fix_sudo: true
+  affected_file: N/A
+  post_action: Restart Mac and enter Recovery Mode (press and hold Power button during startup on Apple Silicon) -> Utilities
+    -> Startup Security Utility. Select the desired volume and configure the security policy.
+  security_level: high
+  risk_level: low
+  risk_desc: The remediation is manual and involves changing a low-level security setting. The risk is primarily that the
+    user will be unable to boot from a legitimate external maintenance or recovery drive if needed.
+- id: secure-boot-full-check
+  description: Verifies that the highest security setting, Full Security, is active to ensure the OS is validated by Apple's
+    signature, protecting against unauthorized kernel extensions and OS changes. Intel/T2 only; queried via mdmclient, which
+    does not report this on Apple Silicon.
+  command: /usr/libexec/mdmclient QuerySecurityInfo | grep -c  'SecureBootLevel = full;'
+  expected: 1
+  sudo: true
+  fix: 'Manual action required: Set Secure Boot to "Full Security" in Startup Security Utility (requires Recovery Mode).'
+  fix_sudo: true
+  affected_file: N/A
+  post_action: Restart Mac and enter Recovery Mode (press and hold Power button during startup on Apple Silicon) -> Utilities
+    -> Startup Security Utility. Select the desired volume and configure the security policy.
+  security_level: high
+  risk_level: low
+  risk_desc: The remediation is manual and involves changing a core boot security setting. Setting to 'Full Security' may
+    prevent booting into older or unverified macOS versions or non-Apple operating systems.
+- id: windows-boot-disallowed-check
+  description: 'Ensures that Windows is disallowed as a boot option (if not explicitly required) to reduce the attack surface
+    and maintain control over the boot process. Intel/T2 only (Boot Camp does not exist on Apple Silicon). Confirmed in
+    the field: on Apple Silicon, mdmclient reports WindowsBootLevel as "not supported" rather than "disallowed"/"allowed",
+    so this check must not run there or it fails permanently regardless of actual configuration.'
+  command: /usr/libexec/mdmclient QuerySecurityInfo | grep -c  'WindowsBootLevel = disallowed;'
+  expected: 1
+  sudo: true
+  fix: 'Manual action required: Configure Windows Boot to "Disallowed" via MDM profile or equivalent security settings if
+    applicable.'
+  fix_sudo: true
+  affected_file: SecurityInfo/MDM Configuration
+  post_action: No direct user action via CLI. Review MDM configuration or consider manually removing any Windows partitions.
+  security_level: baseline
+  risk_level: low
+  risk_desc: The remediation is manual/MDM-based. The risk is that if Windows is required for dual-boot functionality, it
+    will be rendered unusable. The setting can be easily reversed if needed.
+
+---
+
+title: Firmware Password (Intel-based Macs)
+os: darwin
+arch:
+- amd64
+labels:
+- boot
+checksuites:
+- id: firmware-password-enabled
+  description: Checks if a firmware password is set, which prevents unauthorized users from booting from any internal or external
+    drive other than the designated startup disk. Intel only; on Apple Silicon, firmwarepasswd errors out since the firmware
+    password mechanism was replaced by FileVault + Secure Enclave.
+  command: '/usr/sbin/firmwarepasswd -check |grep -c ''Password Enabled: Yes'''
+  expected: 1
+  sudo: true
+  fix: 'Manual action required: Set a strong firmware password in Recovery Mode: sudo firmwarepasswd -setpasswd'
+  fix_sudo: true
+  affected_file: N/A
+  post_action: 'Restart Mac and enter Recovery Mode (Cmd+R on Intel, press and hold Power button on Apple Silicon) to set
+    the password. **NOTE**: Do not lose this password, as it requires a visit to Apple for recovery.'
+  security_level: high
+  risk_level: high
+  risk_desc: The remediation is manual. The risk is high only in the event of a forgotten password. Losing the firmware password
+    requires physical access to an Apple Store or authorized service provider to remove, effectively locking the user out
+    of the system's boot options.
