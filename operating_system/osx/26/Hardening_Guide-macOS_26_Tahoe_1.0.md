@@ -12,68 +12,264 @@ title: Hardening Guide
   - [Disclaimer on Intel-based Macs](#disclaimer-on-intel-based-macs)
 - [macOS System Security](#macos-system-security)
   - [Secure Boot](#secure-boot)
+          - [Startup Security for Intel-based Macs](#startup-security-for-intel-based-macs)
+          - [Description](#description)
+          - [Compliance Check](#compliance-check)
+          - [Implementation](#implementation)
+          - [Startup Security for Apple Silicon-based Macs](#startup-security-for-apple-silicon-based-macs)
+          - [Description](#description-1)
+          - [Compliance Check](#compliance-check-1)
   - [Ensure System Integrity Protection Is Enabled](#ensure-system-integrity-protection-is-enabled)
+          - [Description](#description-2)
+          - [Compliance Check](#compliance-check-2)
+          - [Implementation](#implementation-1)
   - [Ensure System Volume Is Read-Only](#ensure-system-volume-is-read-only)
+          - [Description](#description-3)
+          - [Compliance Check](#compliance-check-3)
+          - [Implementation](#implementation-2)
   - [Enable Authenticated Root](#enable-authenticated-root)
+          - [Description](#description-4)
+          - [Compliance Check](#compliance-check-4)
+          - [Implementation](#implementation-3)
   - [Gatekeeper](#gatekeeper)
+          - [Description](#description-5)
+          - [Compliance Check](#compliance-check-5)
+          - [Implementation](#implementation-4)
   - [Firmware Password (Intel-based Macs)](#firmware-password-intel-based-macs)
+          - [Set a Firmware Password](#set-a-firmware-password)
+          - [Compliance Check](#compliance-check-6)
+          - [Implementation](#implementation-5)
+          - [Disable Firmware Password Reset Capability](#disable-firmware-password-reset-capability)
+          - [Implementation](#implementation-6)
   - [FileVault](#filevault)
+          - [Enable FileVault](#enable-filevault)
+          - [Compliance Check](#compliance-check-7)
+          - [Implementation via the Settings GUI:](#implementation-via-the-settings-gui)
+          - [Implementation via the Command Line](#implementation-via-the-command-line)
     - [Restrict Users](#restrict-users)
+          - [Description](#description-6)
+          - [Compliance Check](#compliance-check-8)
+          - [Implementation](#implementation-7)
   - [Disable System Diagnostic and Usage Data Reporting](#disable-system-diagnostic-and-usage-data-reporting)
+          - [Description](#description-7)
+          - [Compliance Check](#compliance-check-9)
+          - [Implementation](#implementation-8)
   - [Lockdown Mode (Optional)](#lockdown-mode-optional)
+          - [Description](#description-8)
+          - [Technical Restrictions](#technical-restrictions)
+          - [Implementation](#implementation-9)
+          - [Compliance Check](#compliance-check-10)
   - [External Accessory](#external-accessory)
+          - [Description](#description-9)
+          - [Compliance Check](#compliance-check-11)
   - [Secure Enclave and Hardware-Security](#secure-enclave-and-hardware-security)
+          - [Secure Enclave Architecture](#secure-enclave-architecture)
   - [Volume Ownership (Secure Token)](#volume-ownership-secure-token)
+          - [Description](#description-10)
+          - [Compliance Check](#compliance-check-12)
+          - [Implementation](#implementation-10)
   - [System Extensions and Driver Management](#system-extensions-and-driver-management)
+          - [Description](#description-11)
+          - [Verifying Running System Extensions](#verifying-running-system-extensions)
+          - [Implementation](#implementation-11)
   - [System Services \& Persistence (Daemon Management)](#system-services--persistence-daemon-management)
     - [System Services and Persistence](#system-services-and-persistence)
+          - [Description:](#description-12)
+          - [Mandatory Policy:](#mandatory-policy)
+      - [Service Directories \& Risk Context](#service-directories--risk-context)
+      - [Auditing Active Services](#auditing-active-services)
+          - [Compliance Check](#compliance-check-13)
+          - [Verify Service Integrity:](#verify-service-integrity)
+          - [Implementation](#implementation-12)
+      - [Service State Monitoring](#service-state-monitoring)
+          - [Compliance Check:](#compliance-check-14)
+          - [Implementation:](#implementation-13)
 - [Authentication](#authentication)
   - [Users Privilege Separation](#users-privilege-separation)
   - [Ensure Password Security - Password Policy](#ensure-password-security---password-policy)
+          - [Description](#description-13)
+          - [Implementation](#implementation-14)
+          - [Compliance Check](#compliance-check-15)
   - [Disable Automatic Login and User List](#disable-automatic-login-and-user-list)
+          - [Description](#description-14)
+          - [Compliance Check \& Implementation:](#compliance-check--implementation)
   - [Screensaver and Unlocking](#screensaver-and-unlocking)
+          - [Description](#description-15)
+          - [Compliance Check \& Implementation:](#compliance-check--implementation-1)
   - [Disable Touch ID \& Unlock with Apple Watch](#disable-touch-id--unlock-with-apple-watch)
+          - [Description](#description-16)
+          - [Configure Touch ID](#configure-touch-id)
+          - [Disable Unlock with Apple Watch](#disable-unlock-with-apple-watch)
+          - [Compliance Check \& Implementation:](#compliance-check--implementation-2)
   - [Disable Guest Accounts](#disable-guest-accounts)
     - [Disable the Guest Account](#disable-the-guest-account)
+          - [Description](#description-17)
+          - [Compliance Check](#compliance-check-16)
+          - [Implementation](#implementation-15)
     - [Disable Guest Account Access to File Shares](#disable-guest-account-access-to-file-shares)
+          - [Description](#description-18)
+          - [Compliance Check \& Implementation:](#compliance-check--implementation-3)
   - [Restrict Sudoers File](#restrict-sudoers-file)
+          - [Description](#description-19)
+          - [Compliance Check](#compliance-check-17)
+          - [Implementation](#implementation-16)
   - [Automatically Lock the Login Keychain (Optional)](#automatically-lock-the-login-keychain-optional)
+          - [Description](#description-20)
+          - [Compliance Check \& Implementation:](#compliance-check--implementation-4)
   - [Require Administrator Password](#require-administrator-password)
+          - [Description](#description-21)
+          - [Compliance Check \& Implementation:](#compliance-check--implementation-5)
   - [Login Items](#login-items)
+          - [Description \& Implementation:](#description--implementation)
   - [macOS Password Manager \& Keychain](#macos-password-manager--keychain)
+          - [Notes About macOS Keychain \& Use of a Password Manager](#notes-about-macos-keychain--use-of-a-password-manager)
+          - [Disable Keychain iCloud Sync](#disable-keychain-icloud-sync)
+          - [TOTP on Different Devices](#totp-on-different-devices)
   - [Passkeys and FIDO2 Hardening](#passkeys-and-fido2-hardening)
+          - [Description](#description-22)
+          - [Disallow Synchronization of Credentials](#disallow-synchronization-of-credentials)
+          - [Enforce Touch ID/Face ID for Passkey Use](#enforce-touch-idface-id-for-passkey-use)
+          - [Compliance Check](#compliance-check-18)
+          - [Implementation](#implementation-17)
   - [Touch ID for Sudo (Optional)](#touch-id-for-sudo-optional)
+          - [Description](#description-23)
+          - [Compliance Check](#compliance-check-19)
+          - [Verifying System Integrity](#verifying-system-integrity)
+          - [Implementation](#implementation-18)
 - [Updates \& Time](#updates--time)
   - [Operating System Updates](#operating-system-updates)
+          - [Ensure All Apple-provided Software Is Current](#ensure-all-apple-provided-software-is-current)
+          - [Compliance Check](#compliance-check-20)
+          - [Implementation](#implementation-19)
+          - [Enable Automatic Updates](#enable-automatic-updates)
+          - [Compliance Check](#compliance-check-21)
+          - [Manual Implementation (Alternative):](#manual-implementation-alternative)
+          - [Modify Update Frequency](#modify-update-frequency)
+          - [Compliance Check](#compliance-check-22)
+          - [Implementation](#implementation-20)
   - [Enable Network Time Synchronization via NTP](#enable-network-time-synchronization-via-ntp)
+          - [Description](#description-24)
+          - [Compliance Check](#compliance-check-23)
+          - [Implementation](#implementation-21)
 - [Secure Storage of Data \& Backups](#secure-storage-of-data--backups)
   - [Time Machine Backups](#time-machine-backups)
+          - [Enable Time Machine for Local Devices](#enable-time-machine-for-local-devices)
+          - [Encrypt Local Backups](#encrypt-local-backups)
+          - [Compliance Check \& Implementation:](#compliance-check--implementation-6)
     - [Disable Automatic Prompt](#disable-automatic-prompt)
+          - [Compliance Check](#compliance-check-24)
+          - [Implementation](#implementation-22)
   - [Finder: Show All File Extensions](#finder-show-all-file-extensions)
+          - [Compliance Check](#compliance-check-25)
+          - [Implementation](#implementation-23)
   - [Disable Creation of Metadata Files](#disable-creation-of-metadata-files)
+          - [Compliance Check](#compliance-check-26)
+          - [Implementation](#implementation-24)
   - [Setuid and Setgid](#setuid-and-setgid)
   - [Set Strict Global Umask (Optional)](#set-strict-global-umask-optional)
 - [Network Communication Hardening \& Privacy](#network-communication-hardening--privacy)
   - [Enable macOS Firewall](#enable-macos-firewall)
+          - [Application Firewall](#application-firewall)
+          - [Compliance Check](#compliance-check-27)
+          - [Implementation](#implementation-25)
     - [Packet Filter (Optional)](#packet-filter-optional)
+          - [Compliance Check](#compliance-check-28)
+          - [Implementation](#implementation-26)
   - [Disable Power Nap and Network Wake](#disable-power-nap-and-network-wake)
-  - [Disable Handoff \& Universal Control](#disable-handoff--universal-control)
+          - [Description](#description-25)
+          - [Compliance Check](#compliance-check-29)
+          - [Implementation](#implementation-27)
+  - [Disable Handoff \& Universal Control (Optional)](#disable-handoff--universal-control-optional)
     - [Disable Handoff](#disable-handoff)
+          - [Compliance Check](#compliance-check-30)
+          - [Implementation](#implementation-28)
     - [Disable Universal Control](#disable-universal-control)
   - [Change Computer-/Hostname](#change-computer-hostname)
-  - [Disable AirDrop](#disable-airdrop)
+          - [Description](#description-26)
+          - [Implementation](#implementation-29)
+          - [Compliance Check](#compliance-check-31)
+  - [Restrict AirDrop Discoverability](#restrict-airdrop-discoverability)
+          - [Description](#description-27)
+          - [Compliance Check](#compliance-check-32)
+          - [Implementation](#implementation-30)
+          - [Implementation Disable the AirDrop Daemon (Optional)](#implementation-disable-the-airdrop-daemon-optional)
   - [Disable Network Services \& Sharing](#disable-network-services--sharing)
-  - [Disable iCloud Services](#disable-icloud-services)
+          - [Disable Screen Sharing](#disable-screen-sharing)
+          - [Compliance Check](#compliance-check-33)
+          - [Implementation](#implementation-31)
+          - [Disable File Sharing](#disable-file-sharing)
+          - [Compliance Check](#compliance-check-34)
+          - [Implementation](#implementation-32)
+          - [Disable Printer Sharing](#disable-printer-sharing)
+          - [Compliance Check](#compliance-check-35)
+          - [Implementation](#implementation-33)
+          - [Disable Remote Login](#disable-remote-login)
+          - [Compliance Check](#compliance-check-36)
+          - [Implementation](#implementation-34)
+          - [Disable Remote Management](#disable-remote-management)
+          - [Compliance Check](#compliance-check-37)
+          - [Implementation](#implementation-35)
+          - [Disable Remote AppleEvents](#disable-remote-appleevents)
+          - [Description](#description-28)
+          - [Compliance Check](#compliance-check-38)
+          - [Implementation](#implementation-36)
+          - [Disable Content Caching](#disable-content-caching)
+          - [Compliance Check](#compliance-check-39)
+          - [Implementation](#implementation-37)
+          - [Disable Media Sharing](#disable-media-sharing)
+          - [Compliance Check](#compliance-check-40)
+          - [Implementation](#implementation-38)
+          - [Legacy \& Services](#legacy--services)
+          - [Compliance Check](#compliance-check-41)
+          - [Implementation](#implementation-39)
+          - [Regular Service Auditing and Minimization Principle](#regular-service-auditing-and-minimization-principle)
+  - [Restrict iCloud Services](#restrict-icloud-services)
+          - [Mandatory (All Devices)](#mandatory-all-devices)
+          - [Mandatory on Managed Enterprise Endpoints, Optional Elsewhere](#mandatory-on-managed-enterprise-endpoints-optional-elsewhere)
+          - [Implementation](#implementation-40)
+          - [Compliance Check](#compliance-check-42)
+          - [Note on iCloud Private Relay](#note-on-icloud-private-relay)
   - [Disable Proximity Based Password Sharing](#disable-proximity-based-password-sharing)
-  - [Disable AirPlay Receiver](#disable-airplay-receiver)
+  - [Disable AirPlay Receiver (Optional, Mandatory on Company Devices)](#disable-airplay-receiver-optional-mandatory-on-company-devices)
+          - [Description](#description-29)
+          - [Implementation](#implementation-41)
+          - [Compliance Check](#compliance-check-43)
   - [Restrict SSH Client Ciphers and Algorithms](#restrict-ssh-client-ciphers-and-algorithms)
+          - [Description](#description-30)
   - [Privacy, Permissions \& Location Services](#privacy-permissions--location-services)
+          - [Apple Intelligence \& Analytics](#apple-intelligence--analytics)
+          - [Turn Off Apple Intelligence Report](#turn-off-apple-intelligence-report)
+          - [Implementation](#implementation-42)
+          - [Privacy Permissions Review](#privacy-permissions-review)
+          - [Review Procedure](#review-procedure)
+          - [Location Services Configuration](#location-services-configuration)
+          - [High Security Policy (Optional)](#high-security-policy-optional)
+          - [Compliance Check](#compliance-check-44)
+          - [Manual Implementation](#manual-implementation)
   - [Post-Quantum Cryptography (PQC)](#post-quantum-cryptography-pqc)
-  - [Apple Intelligence \& Siri](#apple-intelligence--siri)
+          - [Enforcing Quantum Security](#enforcing-quantum-security)
+          - [Compliance Check](#compliance-check-45)
+          - [Implementation](#implementation-43)
+  - [Apple Intelligence \& Siri (Optional, Mandatory on Company Systems Handling Sensitive Data)](#apple-intelligence--siri-optional-mandatory-on-company-systems-handling-sensitive-data)
+          - [Disable Siri](#disable-siri)
+          - [Compliance Check](#compliance-check-46)
+          - [Disable Apple Intelligence](#disable-apple-intelligence)
+          - [Compliance Check](#compliance-check-47)
 - [Application \& Software Integrity](#application--software-integrity)
   - [Software Management and Third-Party Sources](#software-management-and-third-party-sources)
+          - [Software Management and Third-Party Sources](#software-management-and-third-party-sources-1)
+          - [Privilege Avoidance (TCC Audit)](#privilege-avoidance-tcc-audit)
+          - [Compliance Check](#compliance-check-48)
+          - [Implementation](#implementation-44)
   - [XProtect \& Malware Remediation](#xprotect--malware-remediation)
+          - [Description:](#description-31)
+          - [Compliance Check](#compliance-check-49)
+          - [Implementation](#implementation-45)
   - [Application Sandboxing](#application-sandboxing)
+          - [Description](#description-32)
+          - [Compliance Check](#compliance-check-50)
+          - [Audit of Sandbox Exceptions](#audit-of-sandbox-exceptions)
+          - [Implementation](#implementation-46)
 - [Additional Security Hardening](#additional-security-hardening)
   - [SSH Secret Management](#ssh-secret-management)
     - [Use of Host-Specific Keys and Config](#use-of-host-specific-keys-and-config)
@@ -769,16 +965,16 @@ Choosing a strong password is MANDATORY for the system. However, in case there i
 - Password MUST consist of at least one character of each character group (letters, capital letters, numbers, special characters)
 - MUST not contain any default passwords
 - MUST consist of at least six different characters
-- MUST have a maximum age of 12 months (365 days)
-- Username MOST NOT be part of the password
-- At least the five previous passwords MUST not be (nearly) equal.
+- Username MUST NOT be part of the password
 - Passwords MUST NOT be reused or used for distinct services.
+
+> **Note:** This policy intentionally does not mandate periodic password rotation (e.g., a 12-month max age). Forced rotation is no longer recommended by current guidance such as NIST SP 800-63B, since it tends to push users toward predictable, incrementally-changed passwords rather than stronger ones. Length, complexity, and non-reuse (ideally enforced with a password manager) provide more real-world security than an expiry timer. Rotate a password on suspicion of compromise, not on a schedule.
 
 ###### Implementation
 
 You can enforce a password policy with the command line tool `pwpolicy`. The following commands can be used to set a policy globally. Here the user `ernw` needs to be replaced with the specific user the policy shall be created for which usually is your current user (run `whoami`) A policy is created for a dedicated user, exported and globally enforced.
 
-    > pwpolicy -u ernw -setpolicy "minChars=16 requiresAlpha=1 requiresNumeric=1 maxMinutesUntilChangePassword=525600 usingHistory=5 usingExpirationDate=1 passwordCannotBeName=1 requiresMixedCase=1 requiresSymbol=1"
+    > pwpolicy -u ernw -setpolicy "minChars=16 requiresAlpha=1 requiresNumeric=1 usingHistory=5 passwordCannotBeName=1 requiresMixedCase=1 requiresSymbol=1"
     Password for authenticator ernw:
     Setting policy for ernw
 
@@ -1020,14 +1216,14 @@ Check and modify the setting via the Settings GUI as shown in <a href="#figure:g
 
 ###### Description
 
-The following restriction ensures that the `sudo` command will prompt the administrator’s password every time a privileged command is executed, and that this authentication must be repeated for every new terminal session.
+The following restriction ensures that `sudo` credential caching is scoped per-TTY (so a cached password in one terminal is not usable from another) and limited to a short window, rather than requiring a fresh password on every single privileged command. A `timestamp_timeout` of `0` technically maximizes this control, but in practice it prompts for a password on every `sudo` invocation, which for anyone doing regular admin/dev work (multiple `sudo` calls per minute) trains muscle-memory password entry rather than meaningfully improving security: the scenario it defends against, an attacker using an already-authenticated shell on an unattended, unlocked machine, is already covered by the screen lock policy in [Screensaver and Unlocking](#screensaver-and-unlocking). A short cached window (15 minutes) keeps the same protection against a *locked/lost* machine while removing most of the daily friction. Environments with a stricter threat model MAY still set this to `0`.
 
 ###### Compliance Check
 
 To check for these mandatory values, use the following command:
 
-    > sudo cat /etc/sudoers | grep -e "tty_tickets" -e "timestamp_timeout=0"
-    Defaults timestamp_timeout=0
+    > sudo cat /etc/sudoers | grep -e "tty_tickets" -e "timestamp_timeout=15"
+    Defaults timestamp_timeout=15
     Defaults tty_tickets
 
 > **Note:** If the command returns no output, it means the settings are missing and the system is non-compliant. The settings must be visible in the output exactly as shown above.
@@ -1042,8 +1238,10 @@ Use the `visudo` command to safely edit the file as root. Add the following two 
 
 Add the following lines:
 
-    Defaults timestamp_timeout=0
+    Defaults timestamp_timeout=15
     Defaults tty_tickets
+
+> **Note:** For a stricter posture, set `timestamp_timeout=0` instead, at the cost of a password prompt on every `sudo` call.
 
 > **Warning:** These changes may be reverted during major macOS upgrades. Therefore, the respective hardening MUST be checked again after upgrading.
 
@@ -1531,10 +1729,12 @@ Recommended configuration:
 - *System Settings* → *Network* → *Firewall*
 - Switch on the Firewall
 - Click on *Options…*
-- Unset *Automatically allow built-in software to receive incoming connections*
+- Leave *Automatically allow built-in software to receive incoming connections* set (Apple's default)
 - Unset *Automatically allow downloaded signed software to receive incoming connections*
 - Set *Enable stealth mode*
 - Unset *Block all incoming connections* (Blocking all connections prevents legitimate services; use only if complete isolation is required).
+
+`--setallowsigned` and `--setallowsignedapp` are two distinct controls: the former governs Apple's own built-in signed binaries, the latter governs third-party signed software you download. Disabling both means routine macOS system daemons (which are already constrained by Gatekeeper, SIP, and code signing) start generating firewall prompts, which mostly trains users to reflexively click *Allow* rather than improving security. Leaving built-in software auto-allowed while still prompting for downloaded software keeps the meaningful control (unknown, third-party listeners) without the noise.
 
 Apple[^30] states regarding those settings:
 
@@ -1550,7 +1750,7 @@ For more details about the single settings, consult the previously linked Apple 
 
 ###### Compliance Check
 
-To check the settings via the command line, run the following commands. The output below illustrates a compliant state where the firewall is active, stealth mode is on, and automatic allow-listing is disabled.
+To check the settings via the command line, run the following commands. The output below illustrates a compliant state where the firewall is active, stealth mode is on, and only downloaded software is gated behind a prompt.
 
     > /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate
     Firewall is enabled. (State = 1)
@@ -1562,10 +1762,8 @@ To check the settings via the command line, run the following commands. The outp
     Firewall has block all state set to disabled.
 
     > /usr/libexec/ApplicationFirewall/socketfilterfw --getallowsigned
-    Automatically allow built-in signed software DISABLED.
+    Automatically allow built-in signed software ENABLED.
     Automatically allow downloaded signed software DISABLED.
-
-The output indicates that the firewall is enforcing rules strictly (`DISABLED` for auto-allow) and is visible only to authorized traffic (`Stealth mode enabled`).
 
 ###### Implementation
 
@@ -1574,8 +1772,16 @@ The settings can be configured via the command line with the following commands:
     sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on
     sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setstealthmode on
     sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setblockall off
-    sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsigned off
+    sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsigned on
     sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsignedapp off
+
+> **Note:** For a stricter posture (e.g., on an enterprise fleet), set `--setallowsigned off` as well, at the cost of prompts for built-in macOS services.
+
+> **Note on firewall logging:** Apple's enterprise release notes for macOS Sequoia state that the `EnableLogging`/`LoggingOption`
+> keys behind `--getloggingmode`/`--getloggingopt` are deprecated, and that Application Firewall logging is increased by
+> default for the `socketfilterfw` process instead. On macOS 26 Tahoe, `--setloggingmode on` / `--setloggingopt throttled`
+> are still worth setting, but treat their compliance checks as best-effort rather than a hard gate. If they report
+> inconsistently, that reflects Apple's own deprecation of the underlying toggle, not a broken firewall.
 
 ### Packet Filter (Optional)
 
@@ -1649,13 +1855,13 @@ To modify the settings, open System Settings and go to:
 
 After this, the previous command MUST return `0`.
 
-## Disable Handoff & Universal Control
+## Disable Handoff & Universal Control (Optional)
 
-Handoff and Universal Control are integral components of Apple’s Continuity ecosystem, designed to enhance user convenience across multiple devices; however, their reliance on constant, proximate wireless communication and iCloud synchronization introduces potential risks to data separation and wireless privacy which MUST be mitigated on managed enterprise endpoints.
+Handoff and Universal Control are integral components of Apple’s Continuity ecosystem, designed to enhance user convenience across multiple devices. Both rely on proximate, opt-in wireless discovery between devices already signed into the same Apple ID, which is a realistic data-exfiltration and session-hijack concern on **managed enterprise endpoints** where the Apple ID may not be under organizational control, but a low-value target on a personal daily driver. These controls MUST be disabled on managed enterprise endpoints and are *optional* elsewhere; disabling them there trades away a core piece of the multi-device Apple workflow for a threat that mostly does not apply outside a fleet context.
 
 ### Disable Handoff
 
-Handoff is a feature to keep your workspaces in sync, but it does require sending data to Apple, which MUST be disabled.
+Handoff is a feature to keep your workspaces in sync, but it does require sending data to Apple, which SHOULD be disabled on managed devices.
 
 - System Settings → General → AirDrop & Handoff
 - Uncheck *Allow Handoff between this Mac and your iCloud devices*
@@ -1685,7 +1891,7 @@ The settings can also be turned off with the following commands:
 
 ### Disable Universal Control
 
-Universal Control is an intended remote control feature by devices nearby having logged in with the same Apple ID such as iPads and Macs. Universal Control streamlines multi-device workspaces by allowing you to use the same peripherals across multiple Macs and iPads. With Universal Control, you can use your main Mac’s trackpad and keyboard to control additional Macs and/or iPads nearby, so you don’t need a desk cluttered up with more than one set of input devices. As data MUST NOT be shared between devices with the same Apple ID without intention and communication over controlled and compliance-approved channels, Universal Control MUST be disabled. Universal control only works when Handoff is enabled, therefore it MUST be ensured that Handoff is disabled. Furthermore, it is recommended to disable Bluetooth as long as it is not used.
+Universal Control is an intended remote control feature by devices nearby having logged in with the same Apple ID such as iPads and Macs. Universal Control streamlines multi-device workspaces by allowing you to use the same peripherals across multiple Macs and iPads. With Universal Control, you can use your main Mac’s trackpad and keyboard to control additional Macs and/or iPads nearby, so you don’t need a desk cluttered up with more than one set of input devices. On managed enterprise endpoints, where data SHOULD NOT move between devices outside compliance-approved channels, Universal Control SHOULD be disabled; Universal Control only works when Handoff is enabled, so disabling Handoff also disables it. On personal devices this is left enabled by default, as *Optional* hardening for users who want it.
 
 - System Settings → Displays
 - Click on *Advanced…*
@@ -1733,37 +1939,43 @@ The settings can also be reviewed and changed via the Preferences App.
 <figcaption>Changing the Local Host Name.</figcaption>
 </figure>
 
-## Disable AirDrop
+## Restrict AirDrop Discoverability
 
 ###### Description
 
-AirDrop MUST be disabled to prevent unauthorized file transfers from potentially untrusted devices. There are two options to disable AirDrop, either temporarily or persistently.
+The actual risk in AirDrop is not the daemon, it is who can discover and send to the device. macOS already exposes this as a three-state control (*Everyone*, *Contacts Only*, *No One*), and *Contacts Only* removes the realistic threat, being solicited by an untrusted nearby device, without losing the feature. AirDrop discoverability MUST be set to *Contacts Only* or *No One*, and MUST NOT be left on *Everyone*.
+
+Disabling the AirDrop daemon entirely is a valid, stricter option for high-security environments or devices with no legitimate use case for it (e.g., kiosk-style or server-like systems), but it is treated as *optional* here rather than mandatory, since it removes a low-risk, high-convenience feature for a marginal gain over *Contacts Only*.
 
 ###### Compliance Check
 
-The following command can be used to review whether the Airdrop deamon has been disabled via the persistent method.
+The following command reviews the discoverability setting:
 
-    > defaults read com.apple.NetworkBrowser DisableAirDrop
-    1
+    > defaults read com.apple.sharingd DiscoverableMode
+    Contacts Only
 
-###### Implementation Disable AirDrop Temporarily in Finder:
+A value of `Off` (equivalent to *No One*) is also compliant. A value of `Everyone` is non-compliant.
 
-Temporarily disabling AirDrop is possible via Finder by limiting its access to *no one*. To disable and restrict AirDrop, perform the following steps:
+###### Implementation
 
-- Open Finder and navigate to the *AirDop* menu in the sidebar.
+Via Finder:
+
+- Open Finder and navigate to the *AirDrop* menu in the sidebar.
 - Click on *Allow me to be discovered by:*
-- Select *No One* from the dropdown menu.
+- Select *Contacts Only* (or *No One* if AirDrop is not used at all).
 
 <figure>
 <img src="img/05_06_Airdrop_01.png" style="width:80.0%" />
-<figcaption>In Finder, set AirDrop visibility to None.</figcaption>
+<figcaption>In Finder, set AirDrop visibility to Contacts Only.</figcaption>
 </figure>
 
-Now, the Mac should not be visible in the AirDrop menu of other devices nearby. Further, it is recommended to disable Bluetooth.
+Via the command line:
 
-###### Implementation Disable the AirDrop Daemon:
+    defaults write com.apple.sharingd DiscoverableMode -string "Contacts Only"
 
-A persistent way of disabling AirDrop is to disable the respective functionality via:
+###### Implementation Disable the AirDrop Daemon (Optional)
+
+A persistent way of disabling AirDrop entirely is to disable the respective functionality via:
 
     defaults write com.apple.NetworkBrowser DisableAirDrop -bool true
 
@@ -1774,13 +1986,11 @@ This will cause AirDrop to be grayed out in the control center, as the following
 <figcaption>AirDrop being grayed out in control center.</figcaption>
 </figure>
 
-AirDrop will still be usable if not set to be discovered by *No One*. The setting takes effect after logging out and logging in again. Then, the AirDrop menus in Finder are also hidden.
-
-The AirDrop daemon is RECOMMENDED to be disabled. It MAY be re-enabled temporarily when needed. To re-enable AirDrop temporarily, you can run the following command and logout and login again:
+The setting takes effect after logging out and logging in again. To re-enable AirDrop, run the following command and log out and back in again:
 
     defaults write com.apple.NetworkBrowser DisableAirDrop -bool false
 
-> **Note:** *This adjustment is necessary for every macOS user.*
+> **Note:** *This adjustment is per-user and, if applied, is necessary for every macOS user on the device.*
 
 ## Disable Network Services & Sharing
 
@@ -1942,18 +2152,21 @@ The following services MUST be disabled:
 
 To verify that these services are disabled, check the `launchctl` disabled list. Each command below MUST return `1`.
 
-    > launchctl print-disabled system | grep -c '"com.apple.tftpd" => true'
+    > launchctl print-disabled system | grep -c '"com.apple.tftpd" => disabled'
     1
-    > launchctl print-disabled system | grep -c '"com.apple.nfsd" => true'
+    > launchctl print-disabled system | grep -c '"com.apple.nfsd" => disabled'
     1
-    > launchctl print-disabled system | grep -c '"org.apache.httpd" => true'
+    > launchctl print-disabled system | grep -c '"org.apache.httpd" => disabled'
     1
-    > launchctl print-disabled system | grep -c '"com.apple.uucp" => true'
+    > launchctl print-disabled system | grep -c '"com.apple.uucp" => disabled'
     1
-    > launchctl print-disabled system | grep -c '"com.openssh.sshd" => true'
+    > launchctl print-disabled system | grep -c '"com.openssh.sshd" => disabled'
     1
 
-> **Note:** If the service is not listed in the output, it may mean it is enabled (default state for some daemons) or not present. To be compliant, it must explicitly appear as `=> true` (disabled) or `=> disabled`.
+> **Note:** `launchctl print-disabled` changed its output format in macOS Ventura, from `"label" => true` / `"label" => false`
+> to `"label" => disabled` / `"label" => enabled`. This guide targets macOS 26 Tahoe, well past that change, so the commands
+> above use the current format. If a service is not listed in the output at all, it is enabled (the default state for some
+> daemons); to be compliant it must explicitly appear as `=> disabled`.
 
 ###### Implementation
 
@@ -1973,17 +2186,32 @@ To maintain the smallest possible attack surface, the list of active system serv
 
 The following command provides a powerful overview of services actively managed by the system. Any service listed here that is not explicitly required for business operations MUST be identified and permanently disabled.
 
-    > launchctl print-disabled system | grep 'true'
+    > launchctl print-disabled system
     # Example Output (Non-Compliant state)
-    "com.apple.screensharing" => false  # NON-COMPLIANT: Enabled
-    "com.apple.tftpd" => true           # COMPLIANT: Disabled
+    "com.apple.screensharing" => enabled   # NON-COMPLIANT: Enabled
+    "com.apple.tftpd" => disabled          # COMPLIANT: Disabled
     [...]
 
-## Disable iCloud Services
+> **Note:** Deliberately run without a `grep` filter here: the point of this audit is to eyeball the *whole* list for anything
+> unexpectedly `enabled`, not just confirm the services already covered above. Piping through `grep 'disabled'` (or the old
+> `grep 'true'`) would hide exactly the non-compliant, enabled entries this check exists to catch.
 
-This section details the hardening of macOS applications by disabling their iCloud functionality to prevent data exfiltration. By default, macOS automatically synchronizes user data such as passwords (keychain), photos, calendar entries, and documents to the user’s iCloud account. In enterprise contexts, this data exfiltration risk MUST be mitigated. While the sync is disabled, the local applications (such as Mail or Notes) remain usable for non-iCloud storage.
+## Restrict iCloud Services
 
-To enforce this, the `ERNW_icloud_services.mobileconfig` policy (or equivalent MDM payload) MUST be installed on the macOS system. The following table lists the relevant keys for the `com.apple.applicationaccess` payload that control iCloud services. All keys belong to the `com.apple.applicationaccess` domain and MUST be set to `false` (boolean) to disable the respective service.
+This section covers hardening of macOS's iCloud sync functionality. By default, macOS automatically synchronizes user data such as passwords (keychain), photos, calendar entries, and documents to the user’s iCloud account. This is a real data-exfiltration and account-portability concern on **managed enterprise endpoints**, where the signed-in Apple ID is typically the user's own personal account rather than an organization-controlled one, and where employee offboarding needs to reliably cut off access to company data. On a **personal device**, this same behavior is the reason people buy Apple hardware, and disabling it wholesale removes Photos, Notes, Reminders, Desktop & Documents sync, and Mail for no corresponding threat-model gain; there is no separate "attacker" account it's exfiltrating to; it is the user's own cloud storage.
+
+The controls below are split accordingly. **Keychain sync** and **Private Relay** are kept mandatory regardless of context, since they map to concrete, defensible risks (credential portability and network-monitoring bypass, respectively) even on a personal machine. Everything else is scoped to managed enterprise endpoints and left *optional* elsewhere.
+
+###### Mandatory (All Devices)
+
+| Functionality | Configuration Key |
+|---|---|
+| Disable iCloud Keychain Sync | `allowCloudKeychainSync` |
+| Disable iCloud Private Relay | `allowCloudPrivateRelay` |
+
+###### Mandatory on Managed Enterprise Endpoints, Optional Elsewhere
+
+To enforce this, the `ERNW_icloud_services.mobileconfig` policy (or equivalent MDM payload) MUST be installed on managed enterprise devices. The following table lists the relevant keys for the `com.apple.applicationaccess` payload. All keys belong to the `com.apple.applicationaccess` domain and MUST be set to `false` (boolean) to disable the respective service on managed devices.
 
 | Functionality | Configuration Key |
 |---|---|
@@ -1997,8 +2225,6 @@ To enforce this, the `ERNW_icloud_services.mobileconfig` policy (or equivalent M
 | Disable iCloud Photo Library | `allowCloudPhotoLibrary` |
 | Disable iCloud Safari Bookmark Sync | `allowCloudBookmarks` |
 | Disable iCloud Freeform (macOS 13+) | `allowCloudFreeform` |
-| Disable iCloud Keychain Sync | `allowCloudKeychainSync` |
-| Disable iCloud Private Relay | `allowCloudPrivateRelay` |
 
 ###### Implementation
 
@@ -2037,22 +2263,21 @@ To install the policy manually (if not pushed via MDM):
 
 ###### Compliance Check
 
-To verify the values, run the following command. The output must show `0` (false) for the critical keys to confirm the policy is successfully installed.
+On personal devices, only `allowCloudKeychainSync` and `allowCloudPrivateRelay` are checked. On managed enterprise endpoints, verify the full policy with the following command; the output must show `0` (false) for all listed keys to confirm the policy is successfully installed.
 
     > sudo profiles -P -o stdout |grep -e allow
-    allowActivityContinuation = 0;
-    allowAutoUnlock = 0;
+    allowCloudKeychainSync = 0;
+    allowCloudPrivateRelay = 0;
+    # Managed enterprise endpoints only, beyond this point:
     allowCloudAddressBook = 0;
     allowCloudBookmarks = 0;
     allowCloudCalendar = 0;
     allowCloudDesktopAndDocuments = 0;
     allowCloudDocumentSync = 0;
     allowCloudFreeform = 0;
-    allowCloudKeychainSync = 0;
     allowCloudMail = 0;
     allowCloudNotes = 0;
     allowCloudPhotoLibrary = 0;
-    allowCloudPrivateRelay = 0;
     allowCloudReminders = 0;
 
 ###### Note on iCloud Private Relay
@@ -2122,7 +2347,7 @@ To verify the values, run the following command, which should print the respecti
     allowPasswordProximityRequests = 0;
     allowPasswordSharing = 0;
 
-## Disable AirPlay Receiver
+## Disable AirPlay Receiver (Optional, Mandatory on Company Devices)
 
 AirPlay Receiver allows a Mac to receive video and audio content streamed from other Apple devices on the same network.
 
@@ -2130,7 +2355,7 @@ AirPlay Receiver allows a Mac to receive video and audio content streamed from o
 
 While useful for consumer scenarios, this feature acts as a server service. When enabled, the Mac opens specific network ports and broadcasts its availability via Bonjour. In a corporate security context, this presents two risks: - **Attack Surface:** It needlessly exposes an open service on the network interface. - **Disruption:** Unauthorized devices could attempt to cast content to the screen, potentially interrupting presentations or workflows.
 
-For company devices, AirPlay Receiver MUST be disabled. If a business case explicitly requires this feature (e.g., dedicated presentation laptops), it MUST be configured with a password; however, for standard clients, it remains disabled.
+For company devices, AirPlay Receiver MUST be disabled. On personal devices this is *optional*: it is local-network-only, still requires the sender to be selected and, by default, approved on-screen for each connection, and the realistic risk is a nuisance cast rather than data exposure. If a business case explicitly requires this feature (e.g., dedicated presentation laptops), it MUST be configured with a password; however, for standard company clients, it remains disabled.
 
 ###### Implementation
 
@@ -2161,29 +2386,28 @@ The output MUST be `0` (false). If the output is `1` or the key is missing (defa
 
 ###### Description
 
-The default cryptographic primitives used by SSH clients prioritize compatibility over security. To mitigate attacks such as Logjam, weak key negotiation, or future quantum-decryption, a restricted list of algorithms MUST be enforced.
+The default cryptographic primitives used by SSH clients prioritize compatibility over security. To mitigate attacks such as Logjam, weak key negotiation, or future quantum-decryption, a restricted list of algorithms SHOULD be enforced.
 
-The configuration below is optimized for modern macOS environments (OpenSSH 9.8+), utilizing *Post-Quantum Cryptography (ML-KEM/Kyber)* and hardware-backed keys. These settings MUST be applied to the user’s SSH configuration file (`\~/.ssh/config`) under the global `Host *` directive.
+The strict PQC-only list below (OpenSSH 9.8+, ML-KEM/Kyber) requires a recent OpenSSH version on the *server* side as well as the client. Applying it under a blanket `Host *` directive means any server that doesn't speak these exact algorithms (older CI runners, embedded devices/IPMI, some managed git hosts, IoT gear) will hard-fail to connect with "no matching key exchange method found" rather than degrading gracefully, and this is a common surprise for anyone applying this guide without already knowing the workaround. The recommended approach is to scope the strict list to hosts you actually control or know support it, and apply a more broadly compatible (but still modern) floor to everything else via `Host *`.
 
-Append the following configuration block to `\~/.ssh/config`.
+Append the following configuration block to `\~/.ssh/config`, replacing `managed-host-1` / `managed-host-2` with the actual hostnames or aliases of infrastructure you know supports these algorithms:
 
-This configuration:
-
-- **KexAlgorithms:** Prioritizes `mlkem768x25519-sha256` (NIST Standard Post-Quantum) and sntrup761 (OpenSSH Post-Quantum). It strictly avoids weak Diffie-Hellman groups.
-- **Ciphers:** Prioritizes ChaCha20-Poly1305 and AES-GCM (Authenticated Encryption).
-- **MACs:** Enforces Encrypt-then-MAC (EtM).
-- **HostKeyAlgorithms:** Includes support for sk-ssh-ed25519 (Hardware Security Keys / YubiKey) and standard Ed25519, explicitly permitting only SHA-2 signatures for RSA.
-
-<!-- -->
-
-    # Restrict Ciphers for ALL connections
-    Host *
+    # Strict, PQC-preferring config for known/managed hosts
+    Host managed-host-1 managed-host-2
       Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr
       MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com
       KexAlgorithms mlkem768x25519-sha256,sntrup761x25519-sha512@openssh.com,sntrup761x25519-sha512,curve25519-sha256@libssh.org,curve25519-sha256,diffie-hellman-group18-sha512,diffie-hellman-group16-sha512
       HostKeyAlgorithms ssh-ed25519-cert-v01@openssh.com,ssh-ed25519,sk-ssh-ed25519-cert-v01@openssh.com,sk-ssh-ed25519@openssh.com,rsa-sha2-512,rsa-sha2-256
 
-> **Note:** If you need to connect to a legacy server that does not support these algorithms, define a specific `Host` block with weaker algorithms rather than weakening the global configuration.
+    # Baseline for everything else: drops legacy CBC/3DES/SHA-1-only modes
+    # without requiring bleeding-edge PQC support on the server
+    Host *
+      Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr
+      MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512,hmac-sha2-256
+      KexAlgorithms curve25519-sha256@libssh.org,curve25519-sha256,diffie-hellman-group18-sha512,diffie-hellman-group16-sha512,diffie-hellman-group-exchange-sha256
+      HostKeyAlgorithms ssh-ed25519-cert-v01@openssh.com,ssh-ed25519,rsa-sha2-512,rsa-sha2-256
+
+> **Note:** If a specific host still fails to connect with the `Host *` baseline (very old OpenSSH, pre-2016 or so), define a narrower `Host` block with additional legacy algorithms for that host only rather than weakening the global default.
 
 ## Privacy, Permissions & Location Services
 
@@ -2302,13 +2526,15 @@ To enforce strict PQC negotiation and disable the fallback:
 
 *(Note: If the key does not exist, the system defaults are used. Explicitly ensuring it is not set to `1` is the goal).*
 
-## Apple Intelligence & Siri
+## Apple Intelligence & Siri (Optional, Mandatory on Company Systems Handling Sensitive Data)
 
-Apple Intelligence and Siri are tightly integrated technologies in macOS Tahoe. While marketed with privacy features like *Private Cloud Compute (PCC)*, the architecture inevitably involves complex data processing pipelines that can extend beyond the local device. For company systems, a Zero Trust approach applies to data processing: We cannot verify the integrity or security of the external compute endpoint (PCC). Therefore, *all* components of the Apple Intelligence suite and the Siri voice assistant MUST be permanently disabled to prevent accidental transmission of sensitive corporate data.
+Apple Intelligence and Siri are tightly integrated technologies in macOS Tahoe. Unlike a generic "your data goes to an unverified cloud" scenario, Apple has published the *Private Cloud Compute (PCC)* architecture for independent security research, and it specifically addresses the black-box concern: requests are processed on attested, purpose-built hardware, are not retained after the response, and PCC software builds are made available for external inspection. That does not make it appropriate for every environment, but it changes the honest risk framing from "unverifiable data pipeline" to "a specific, published, still-third-party processing path."
 
-###### Disable Siriaudio Content Streamed from Other Apple Devices on the Same Network.
+For company systems that handle regulated or sensitive data, where no third-party processing path is acceptable regardless of its design, Apple Intelligence and Siri MUST be disabled entirely. On personal devices and company systems without that constraint, both are *optional*: on-device processing (which covers most Siri requests and many Apple Intelligence features) never leaves the machine, and PCC only engages for the subset of requests that need more compute.
 
-It cannot be ruled out that data is transmitted to Apple when using Siri in a corporate context. Therefore, the voice assistant service MUST be disabled as the first line of defense.
+###### Disable Siri
+
+It cannot be ruled out that some data is transmitted to Apple when using Siri. On systems where this is unacceptable, disable the voice assistant service.
 
 ###### Compliance Check
 
@@ -2322,9 +2548,9 @@ It cannot be ruled out that data is transmitted to Apple when using Siri in a co
 
 ###### Disable Apple Intelligence
 
-Apple Intelligence introduces generative models for writing, image creation, and notification summarization. Even if “On-Device Processing” is preferred by the OS, the system is designed to seamlessly offload complex tasks to Apple’s cloud servers (PCC).
+Apple Intelligence introduces generative models for writing, image creation, and notification summarization. Requests that exceed on-device capability are offloaded to PCC rather than a general-purpose cloud backend.
 
-To eliminate the risk of data egress, these features MUST be disabled globally.
+On systems where any third-party processing path is unacceptable, disable these features globally.
 
 ###### Compliance Check
 

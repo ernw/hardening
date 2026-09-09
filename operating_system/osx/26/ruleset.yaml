@@ -118,8 +118,7 @@ checksuites:
     system_profiler SPStorageDataType | awk '/Mount Point: \/$/{x=NR+2}(NR==x)' |grep -c 'Writable: No'
   expected: 1
   sudo: true
-  fix: 'Manual action required: If Writable is ''Yes'' due to a previous change, you must restore the Sealed System Volume:
-    sudo /usr/bin/kmutil trigger-snapshot'
+  fix: sudo /usr/bin/kmutil trigger-snapshot
   fix_sudo: true
   affected_file: N/A
   post_action: 'If a fix was applied, a reboot is typically required to ensure the snapshot is active and the volume is sealed.
@@ -291,7 +290,7 @@ checksuites:
   command: defaults read /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory.plist AutoSubmit
   expected: 0
   sudo: false
-  fix: sudo defaults write /Library/Application\\ Support/CrashReporter/DiagnosticMessagesHistory.plist AutoSubmit -int 0
+  fix: sudo defaults write /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory.plist AutoSubmit -int 0
   fix_sudo: true
   affected_file: /Library/Application Support/CrashReporter/DiagnosticMessagesHistory.plist
   post_action: No system restart required. The setting takes effect immediately for future crash reports.
@@ -302,10 +301,10 @@ checksuites:
 - id: crashreporter-thirdparty-submit-disabled
   description: Verifies that the submission of diagnostic data for third-party developers is disabled, further restricting
     the sharing of potentially sensitive data.
-  command: sudo defaults read /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory.plist ThirdPartyDataSubmitt
+  command: sudo defaults read /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory.plist ThirdPartyDataSubmit
   expected: 0
   sudo: true
-  fix: sudo defaults write /Library/Application\\ Support/CrashReporter/DiagnosticMessagesHistory.plist ThirdPartyDataSubmitt
+  fix: sudo defaults write /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory.plist ThirdPartyDataSubmit
     -int 0
   fix_sudo: true
   affected_file: /Library/Application Support/CrashReporter/DiagnosticMessagesHistory.plist
@@ -370,7 +369,7 @@ checksuites:
 - id: usb-restricted-mode-enabled
   description: 'Verifies that USB Accessory Security (Restricted Mode) is active, requiring user approval before accessories
     can communicate when the Mac is locked. NOTE: This feature only exists on Apple Silicon laptops (MacBook Air/Pro). It
-    is not available on desktop Macs (Mac mini, iMac, Mac Pro, Mac Studio) — on those systems this check passes as not
+    is not available on desktop Macs (Mac mini, iMac, Mac Pro, Mac Studio). On those systems this check passes as not
     applicable.'
   command: if [ -f /Library/Preferences/com.apple.accessd.plist ]; then defaults read /Library/Preferences/com.apple.accessd
     USBAccessories 2>/dev/null | grep -c 'Ask'; else echo 1; fi
@@ -457,8 +456,7 @@ checksuites:
     sudo pwpolicy -getglobalpolicy | grep -c requiresNumeric=1 && sudo pwpolicy -getglobalpolicy | grep -E -c 'maxFailedLoginAttempts=[1-5]($|[^0-9])'
   expected: 5
   sudo: true
-  fix: 'Manual action required: Set stricter password requirements. Example command: sudo pwpolicy -setglobalpolicy ''minChars=16
-    requiresNumeric=1 requiresSymbol=1 requiresMixedCase=1 usingHistory=5 maxFailedLoginAttempts=5'''
+  fix: sudo pwpolicy -setglobalpolicy 'minChars=16 requiresNumeric=1 requiresSymbol=1 requiresMixedCase=1 usingHistory=5 maxFailedLoginAttempts=5'
   fix_sudo: true
   affected_file: N/A
   post_action: Inform users of the new policy before enforcement. New users will be immediately subject to the policy; existing
@@ -520,24 +518,27 @@ checksuites:
   risk_level: medium
   risk_desc: The automated fix modifies the critical '/etc/sudoers' file. An error in the modification command could corrupt
     the file, potentially locking out all administrative users from using the 'sudo' command.
-- id: sudo-password-timeout-disabled
-  description: Verifies that the 'timestamp_timeout' for sudo is set to 0. This forces a password prompt every time 'sudo'
-    is used, eliminating the cached password timeout and maximizing security.
-  command: cat /etc/sudoers |grep -c 'Defaults timestamp_timeout=0'
+- id: sudo-password-timeout-bounded
+  description: Verifies that the 'timestamp_timeout' for sudo is bounded to a short window (15 minutes) rather than uncapped.
+    Combined with tty_tickets, this scopes cached credentials to the current TTY for a limited time; the threat it defends
+    against (an attacker using an already-authenticated shell on an unattended, unlocked machine) is already covered by the
+    screensaver lock policy, so a value of 0 (a prompt on every single 'sudo' call) is available as a stricter option but not
+    the default.
+  command: cat /etc/sudoers |grep -c 'Defaults timestamp_timeout=15'
   expected: 1
   sudo: true
   fix: |
-    # Ensure timestamp_timeout is set to 0. Replace any existing timeout setting or append if missing.
-    sudo /usr/bin/perl -pi -e 's/^(Defaults\s+.*timestamp_timeout=.*)$/Defaults timestamp_timeout=0/g; s/^(Defaults\s+env_reset)/$1\nDefaults timestamp_timeout=0/ unless /Defaults timestamp_timeout=/' /etc/sudoers
+    # Ensure timestamp_timeout is bounded to 15 minutes. Replace any existing timeout setting or append if missing.
+    sudo /usr/bin/perl -pi -e 's/^(Defaults\s+.*timestamp_timeout=.*)$/Defaults timestamp_timeout=15/g; s/^(Defaults\s+env_reset)/$1\nDefaults timestamp_timeout=15/ unless /Defaults timestamp_timeout=/' /etc/sudoers
   fix_sudo: true
   affected_file: /etc/sudoers
   post_action: The fix is immediate. No manual restart is required, but a new terminal session may be needed to verify the
-    change. This setting can significantly impact administrator workflows due to constant password prompts.
-  security_level: high
+    change. For a stricter posture, set timestamp_timeout=0 instead of 15.
+  security_level: baseline
   risk_level: medium
   risk_desc: The automated fix modifies the critical '/etc/sudoers' file. An error in the modification command could corrupt
-    the file, potentially locking out all administrative users from using the 'sudo' command. Functionally, it severely impacts
-    admin convenience.
+    the file, potentially locking out all administrative users from using the 'sudo' command. Functionally, this is a minor
+    convenience trade-off rather than a severe one, since credentials still expire quickly and are scoped per-TTY.
 
 ---
 
@@ -550,15 +551,22 @@ labels:
 - auth
 checksuites:
 - id: system-preferences-lockdown
-  description: Checks if the 'system.preferences' authorization right is set to require an administrator password (shared
-    = false). This prevents standard users from changing system settings that affect the entire computer.
-  command: security authorizationdb read system.*System Settings* 2> /dev/null | grep -A 1 '<key>shared</key>' | grep -c '<false/>'
+  description: 'Checks if the ''system.preferences'' authorization right is set to require an administrator password (shared
+    = false). This prevents standard users from changing system settings that affect the entire computer. Note: ''security
+    authorizationdb write'' only accepts allow/deny/a named rule as a positional argument, or a complete plist via stdin;
+    it cannot take an inline XML fragment as an argument (the previous version of this fix tried to, and always failed with
+    a usage error). The correct approach, confirmed against Apple''s own CIS benchmark remediation, is read the full right
+    to a temp file, flip the shared key there, then write the whole plist back.'
+  command: security authorizationdb read system.preferences 2> /dev/null | grep -A 1 '<key>shared</key>' | grep -c '<false/>'
   expected: 1
   sudo: false
-  fix: sudo /usr/bin/security authorizationdb write system.*System Settings* "<key>shared</key><false/>"
+  fix: sudo /usr/bin/security authorizationdb read system.preferences > /tmp/system.preferences.plist && sudo /usr/bin/defaults
+    write /tmp/system.preferences.plist shared -bool false && sudo /usr/bin/security authorizationdb write system.preferences
+    < /tmp/system.preferences.plist && sudo rm -f /tmp/system.preferences.plist
   fix_sudo: true
   affected_file: /var/db/auth.db
   post_action: No restart required. The change takes effect immediately, requiring an admin password to change System Settings.
+    The temp plist at /tmp/system.preferences.plist is removed as the last step of the fix.
   security_level: baseline
   risk_level: low
   risk_desc: The automated fix uses a standard security utility to modify authorization rights. The risk is low; the only
@@ -658,11 +666,11 @@ checksuites:
   command: softwareupdate -l 2>&1 |grep -c 'No new software available.'
   expected: 1
   sudo: false
-  fix: 'Manual action required: Ensure all updates are installed: sudo softwareupdate --install --all'
+  fix: sudo softwareupdate --install --all
   fix_sudo: true
   affected_file: N/A
-  post_action: Installing updates may require a system reboot and can be disruptive. This check primarily serves as an alert
-    for pending updates.
+  post_action: Installing updates may require a system reboot and can be disruptive; consider scheduling this fix outside
+    working hours in automated runs.
   security_level: high
   risk_level: low
   risk_desc: The remediation is manual. Automated installation of all updates could cause application or system compatibility
@@ -955,7 +963,7 @@ checksuites:
 - id: application-firewall-enabled
   description: Ensures the Application Firewall is enabled to control and restrict incoming network connections, protecting
     against unauthorized access.
-  command: /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate |grep -c 'Firewall is enabled. (State = 2)'
+  command: /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate |grep -c 'Firewall is enabled. (State = 1)'
   expected: 1
   sudo: false
   fix: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on
@@ -995,61 +1003,73 @@ checksuites:
   risk_level: medium
   risk_desc: The automated fix changes a core firewall policy. Disabling 'block all' allows configured application rules to
     function.
-- id: firewall-auto-allow-signed-disabled
-  description: Ensures 'Automatically allow built-in signed software' is DISABLED. This enforces explicit approval for all
-    applications, even those from Apple.
+- id: firewall-auto-allow-signed-enabled
+  description: Ensures 'Automatically allow built-in signed software' stays ENABLED (Apple's default). Built-in binaries
+    are already constrained by Gatekeeper, SIP, and code signing; disabling this makes routine macOS system daemons trigger
+    firewall prompts, which mostly trains users to reflexively click Allow rather than improving security. Third-party
+    software is still gated by the 'downloaded software' check below.
   command: /usr/libexec/ApplicationFirewall/socketfilterfw --getallowsigned |grep -c 'Automatically allow built-in signed
-    software DISABLED'
+    software ENABLED'
   expected: 1
   sudo: false
-  fix: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsigned off
+  fix: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsigned on
   fix_sudo: true
   affected_file: N/A
-  post_action: Disabling this requires explicit approval for many core macOS processes, potentially leading to frequent firewall
-    prompts for the user.
-  security_level: high
-  risk_level: low
-  risk_desc: The automated fix is a standard firewall command. The primary risk is a **significant increase in user prompts**
-    for network access.
+  post_action: 'Restores the macOS default. For a stricter posture (e.g., an enterprise fleet), set --setallowsigned off
+    instead, at the cost of prompts for built-in macOS services.'
+  security_level: baseline
+  risk_level: very low
+  risk_desc: The automated fix restores Apple's default. No meaningful risk; this trades a theoretical prompt-everything
+    posture for practical daily usability without giving up third-party application gating.
 - id: firewall-auto-allow-downloaded-disabled
   description: Ensures 'Automatically allow downloaded software' is DISABLED. This enforces explicit approval for all third-party
-    software.
+    software, which is the control that actually matters (unknown, third-party listeners rather than Apple's own signed
+    binaries).
   command: /usr/libexec/ApplicationFirewall/socketfilterfw --getallowsigned |grep -c 'Automatically allow downloaded software
     DISABLED'
   expected: 1
   sudo: false
-  fix: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsigned off
+  fix: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsignedapp off
   fix_sudo: true
   affected_file: N/A
   post_action: Disabling this requires explicit approval for all newly downloaded applications upon first run.
   security_level: high
   risk_level: low
   risk_desc: The automated fix is a standard firewall command. The primary risk is an **increase in user prompts** for network
-    access.
+    access from newly installed third-party software.
 - id: firewall-logging-enabled
-  description: Verifies that Application Firewall logging is enabled.
+  description: 'Best-effort, not a hard gate: verifies that Application Firewall logging is enabled. Apple''s macOS Sequoia
+    enterprise release notes state the underlying EnableLogging/LoggingOption keys are deprecated and that firewall logging
+    is increased by default for the socketfilterfw process, i.e. Apple has moved this from an explicit user-facing toggle
+    to a default-on internal behavior. On macOS 26 Tahoe this check may report inconsistently, or the flag may no longer
+    reflect real logging state, since it depends on a mechanism Apple has already deprecated once. Treat a failure here as
+    informational rather than a compliance gap.'
   command: /usr/libexec/ApplicationFirewall/socketfilterfw --getloggingmode |grep -c 'Log mode is on'
   expected: 1
   sudo: false
   fix: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setloggingmode on
   fix_sudo: true
   affected_file: N/A
-  post_action: The fix is immediate.
-  security_level: baseline
+  post_action: The fix is immediate where the flag still functions. If the command errors or the state doesn't change, that
+    is consistent with Apple's stated deprecation of this control rather than a fix failure.
+  security_level: optional
   risk_level: very low
-  risk_desc: The automated fix enables logging. The only risk is a minor increase in disk usage.
+  risk_desc: The automated fix enables logging where the flag still works. The only risk is a minor increase in disk usage;
+    Apple's default-on logging behavior since Sequoia likely already covers most of what this control was for.
 - id: firewall-log-throttling-enabled
-  description: Ensures firewall logging is set to 'throttled'.
+  description: 'Best-effort, not a hard gate: ensures firewall logging is set to ''throttled''. Subject to the same Sequoia+
+    deprecation of the LoggingOption key noted above; treat a failure here as informational.'
   command: /usr/libexec/ApplicationFirewall/socketfilterfw --getloggingopt |grep -c 'Log Option is throttled'
   expected: 1
   sudo: false
   fix: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setloggingopt throttled
   fix_sudo: true
   affected_file: N/A
-  post_action: The fix is immediate.
-  security_level: baseline
+  post_action: The fix is immediate where the flag still functions.
+  security_level: optional
   risk_level: very low
-  risk_desc: The automated fix is non-disruptive and necessary for resource management.
+  risk_desc: The automated fix is non-disruptive where it still applies. Apple has deprecated the underlying key as of macOS
+    Sequoia, so this is no longer a meaningful compliance gate on its own.
 - id: packet-filter-enabled-check
   description: Verifies that the lower-level Packet Filter (PF) is enabled.
   command: 'sudo pfctl -s info 2>/dev/null | grep -c ''Status: Enabled'''
@@ -1112,8 +1132,9 @@ labels:
 - network
 checksuites:
 - id: handoff-advertising-disabled
-  description: Ensures Handoff (Continuity) advertising is disabled. This prevents the constant broadcasting of the device's
-    activity, which can be tracked and compromise user privacy/location.
+  description: 'Mandatory on managed enterprise endpoints, optional elsewhere: ensures Handoff (Continuity) advertising is
+    disabled, preventing broadcast of device activity to nearby devices signed into the same Apple ID. On a personal device
+    this is a low-value target; on a managed endpoint the signed-in Apple ID may not be under organizational control.'
   command: defaults -currentHost read com.apple.coreservices.useractivityd ActivityAdvertisingAllowed
   expected: 0
   sudo: false
@@ -1122,13 +1143,13 @@ checksuites:
   affected_file: /Library/Preferences/ByHost/com.apple.coreservices.useractivityd.*.plist
   post_action: The fix is user-specific and takes effect immediately. Disabling this breaks the Handoff/Continuity feature
     with other Apple devices.
-  security_level: high
+  security_level: optional
   risk_level: low
   risk_desc: The automated fix is a non-disruptive 'defaults' write. The only risk is the **loss of Handoff/Continuity functionality**,
     which may impact user workflow between Apple devices.
 - id: handoff-receiving-disabled
-  description: Ensures Handoff (Continuity) receiving is disabled. This prevents the device from accepting activity from other
-    nearby Apple devices, further enhancing privacy.
+  description: 'Mandatory on managed enterprise endpoints, optional elsewhere: ensures Handoff (Continuity) receiving is disabled,
+    preventing the device from accepting activity from nearby devices signed into the same Apple ID.'
   command: defaults -currentHost read com.apple.coreservices.useractivityd ActivityReceivingAllowed
   expected: 0
   sudo: false
@@ -1137,14 +1158,14 @@ checksuites:
   affected_file: /Library/Preferences/ByHost/com.apple.coreservices.useractivityd.*.plist
   post_action: The fix is user-specific and takes effect immediately. Disabling this breaks the Handoff/Continuity feature
     with other Apple devices.
-  security_level: high
+  security_level: optional
   risk_level: low
   risk_desc: The automated fix is a non-disruptive 'defaults' write. The only risk is the **loss of Handoff/Continuity functionality**,
     which may impact user workflow between Apple devices.
 
 ---
 
-title: Disable AirDrop
+title: Restrict AirDrop Discoverability
 os: darwin
 arch:
 - arm64
@@ -1152,9 +1173,25 @@ arch:
 labels:
 - network
 checksuites:
-- id: airdrop-disabled
-  description: Ensures AirDrop is disabled to prevent unauthorized file transfers to and from the machine, thereby mitigating
-    potential data leakage or malware transfer.
+- id: airdrop-discoverability-restricted
+  description: Ensures AirDrop discoverability is not set to 'Everyone'. 'Contacts Only' (or 'Off') removes the realistic
+    threat of unsolicited nearby devices without disabling the feature outright.
+  command: defaults read com.apple.sharingd DiscoverableMode 2>/dev/null | grep -v -c '^Everyone$'
+  expected: 1
+  sudo: false
+  fix: defaults write com.apple.sharingd DiscoverableMode -string "Contacts Only"
+  fix_sudo: false
+  affected_file: ~/Library/Preferences/com.apple.sharingd.plist
+  post_action: The fix is user-specific and takes effect immediately for new discovery attempts. AirDrop remains usable with
+    contacts.
+  security_level: baseline
+  risk_level: very low
+  risk_desc: The automated fix is a non-disruptive user-specific 'defaults' write. AirDrop remains fully usable with contacts;
+    the only change is that unknown nearby devices can no longer see or send to this Mac.
+- id: airdrop-daemon-disabled
+  description: 'Optional, stricter control: verifies the AirDrop daemon is disabled entirely, removing the feature rather
+    than just restricting discoverability. Recommended for kiosk-style or server-like systems with no legitimate AirDrop
+    use case, or high-security environments.'
   command: defaults read com.apple.NetworkBrowser DisableAirDrop
   expected: 1
   sudo: false
@@ -1163,10 +1200,11 @@ checksuites:
   affected_file: ~/Library/Preferences/com.apple.NetworkBrowser.plist
   post_action: The fix is user-specific and takes effect after the next login or a Finder restart (killall Finder). This completely
     removes the ability to use AirDrop.
-  security_level: high
+  security_level: optional
   risk_level: low
   risk_desc: The automated fix is a non-disruptive user-specific 'defaults' write. The only risk is the **loss of the convenient
-    AirDrop file transfer functionality**, which may impact user workflow.
+    AirDrop file transfer functionality**, which may impact user workflow. Given 'Contacts Only' discoverability already
+    removes the realistic threat, this control trades a working feature for marginal additional risk reduction.
 
 ---
 
@@ -1180,7 +1218,7 @@ labels:
 checksuites:
 - id: service-tftp-disabled
   description: Verifies that the Trivial File Transfer Protocol (TFTP) service is disabled.
-  command: launchctl print-disabled system | grep -c '"com.apple.tftpd" => true'
+  command: launchctl print-disabled system | grep -c '"com.apple.tftpd" => disabled'
   expected: 1
   sudo: false
   fix: sudo launchctl disable system/com.apple.tftpd
@@ -1192,7 +1230,7 @@ checksuites:
   risk_desc: TFTP is an insecure protocol with no authentication. Running it exposes the system to trivial data exfiltration.
 - id: service-nfs-disabled
   description: Verifies that the Network File System (NFS) daemon is disabled.
-  command: launchctl print-disabled system | grep -c '"com.apple.nfsd" => true'
+  command: launchctl print-disabled system | grep -c '"com.apple.nfsd" => disabled'
   expected: 1
   sudo: false
   fix: sudo launchctl disable system/com.apple.nfsd
@@ -1204,7 +1242,7 @@ checksuites:
   risk_desc: NFS is generally not required for client devices. Disabling it reduces the attack surface.
 - id: service-httpd-disabled
   description: Verifies that the built-in Apache Web Server (httpd) is disabled.
-  command: launchctl print-disabled system | grep -c '"org.apache.httpd" => true'
+  command: launchctl print-disabled system | grep -c '"org.apache.httpd" => disabled'
   expected: 1
   sudo: false
   fix: sudo launchctl disable system/org.apache.httpd
@@ -1217,7 +1255,7 @@ checksuites:
     dedicated servers.
 - id: service-uucp-disabled
   description: Verifies that the Unix-to-Unix Copy Protocol (UUCP) is disabled.
-  command: launchctl print-disabled system | grep -c '"com.apple.uucp" => true'
+  command: launchctl print-disabled system | grep -c '"com.apple.uucp" => disabled'
   expected: 1
   sudo: false
   fix: sudo launchctl disable system/com.apple.uucp
@@ -1229,7 +1267,7 @@ checksuites:
   risk_desc: UUCP is a legacy protocol that is effectively obsolete and should be disabled.
 - id: service-ssh-disabled
   description: Verifies that the SSH Server (Remote Login) is disabled via launchctl.
-  command: launchctl print-disabled system | grep -c '"com.openssh.sshd" => true'
+  command: launchctl print-disabled system | grep -c '"com.openssh.sshd" => disabled'
   expected: 1
   sudo: false
   fix: sudo launchctl disable system/com.openssh.sshd
@@ -1303,12 +1341,11 @@ checksuites:
   command: ps -ef |grep -e ARDAgent |grep -v grep | wc -l
   expected: 0
   sudo: true
-  fix: 'Manual action required: Ensure Screen Sharing and Remote Management are disabled in System Settings > General > Sharing.
-    Then kill the process: sudo killall ARDAgent'
+  fix: sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -deactivate -stop
   fix_sudo: true
   affected_file: N/A
-  post_action: The ARDAgent can be restarted by re-enabling Screen Sharing/Remote Management. Check the launchd status for
-    permanent disabling.
+  post_action: 'kickstart -deactivate -stop persistently disables the agent (unlike a plain killall, which the launchd service
+    would just respawn). Re-enabling Remote Management via System Settings will start it again if needed later.'
   security_level: high
   risk_level: low
   risk_desc: The check serves as a secondary control. Manually killing the agent will disrupt any active remote management
@@ -1403,7 +1440,7 @@ checksuites:
 
 ---
 
-title: Disable iCloud Services
+title: Restrict iCloud Services
 os: darwin
 arch:
 - arm64
@@ -1412,8 +1449,8 @@ labels:
 - privacy
 checksuites:
 - id: icloud-addressbook-disabled
-  description: Verifies that synchronization of Contacts (Address Book) with iCloud is disallowed via a configuration profile,
-    protecting sensitive contact information from unauthorized cloud storage.
+  description: 'Enterprise-managed devices: mandatory. Personal devices: optional. Verifies that synchronization of Contacts (Address Book) with iCloud is disallowed via a configuration profile,
+    protecting sensitive contact information from unauthorized cloud storage.'
   command: profiles -P -o stdout |grep -c 'allowCloudAddressBook = 0;'
   expected: 1
   sudo: true
@@ -1422,13 +1459,12 @@ checksuites:
   fix_sudo: false
   affected_file: MDM Configuration Profile
   post_action: If this is enforced via MDM, no user action is needed. Manual change is user-specific and can be easily reversed.
-  security_level: high
+  security_level: optional
   risk_level: none
-  risk_desc: The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption.
-    Disabling the sync may break contact availability across other Apple devices.
+  risk_desc: 'The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption. Note - risk_level here reflects automation safety only, not workflow impact; on a personal device, losing this sync is a real usability cost, which is why this control is optional outside managed fleets. Disabling the sync may break contact availability across other Apple devices.'
 - id: icloud-bookmarks-disabled
-  description: Verifies that synchronization of Safari Bookmarks with iCloud is disallowed, ensuring browsing history and
-    saved links remain local and protected.
+  description: 'Enterprise-managed devices: mandatory. Personal devices: optional. Verifies that synchronization of Safari Bookmarks with iCloud is disallowed, ensuring browsing history and
+    saved links remain local and protected.'
   command: profiles -P -o stdout |grep -c 'allowCloudBookmarks = 0;'
   expected: 1
   sudo: true
@@ -1438,13 +1474,12 @@ checksuites:
   affected_file: MDM Configuration Profile
   post_action: If enforced via MDM, no user action is needed. Disabling the sync will break bookmark synchronization across
     devices.
-  security_level: baseline
+  security_level: optional
   risk_level: none
-  risk_desc: The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption.
-    Disabling the sync may break bookmark availability across other Apple devices.
+  risk_desc: 'The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption. Note - risk_level here reflects automation safety only, not workflow impact; on a personal device, losing this sync is a real usability cost, which is why this control is optional outside managed fleets. Disabling the sync may break bookmark availability across other Apple devices.'
 - id: icloud-calendar-disabled
-  description: Verifies that synchronization of Calendar data with iCloud is disallowed, protecting sensitive scheduling and
-    meeting information from cloud storage.
+  description: 'Enterprise-managed devices: mandatory. Personal devices: optional. Verifies that synchronization of Calendar data with iCloud is disallowed, protecting sensitive scheduling and
+    meeting information from cloud storage.'
   command: profiles -P -o stdout |grep -c 'allowCloudCalendar = 0;'
   expected: 1
   sudo: true
@@ -1454,13 +1489,12 @@ checksuites:
   affected_file: MDM Configuration Profile
   post_action: If enforced via MDM, no user action is needed. Disabling the sync will break calendar synchronization across
     devices.
-  security_level: high
+  security_level: optional
   risk_level: none
-  risk_desc: The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption.
-    Disabling the sync may break calendar availability across other Apple devices.
+  risk_desc: 'The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption. Note - risk_level here reflects automation safety only, not workflow impact; on a personal device, losing this sync is a real usability cost, which is why this control is optional outside managed fleets. Disabling the sync may break calendar availability across other Apple devices.'
 - id: icloud-desktop-and-documents-disabled
-  description: Verifies that synchronization of Desktop and Documents folders with iCloud Drive is disallowed. This is a crucial
-    control to ensure sensitive files remain local.
+  description: 'Enterprise-managed devices: mandatory. Personal devices: optional. Verifies that synchronization of Desktop and Documents folders with iCloud Drive is disallowed. This is a crucial
+    control to ensure sensitive files remain local.'
   command: profiles -P -o stdout |grep -c 'allowCloudDesktopAndDocuments = 0;'
   expected: 1
   sudo: true
@@ -1470,13 +1504,12 @@ checksuites:
   affected_file: MDM Configuration Profile
   post_action: If enforced via MDM, no user action is needed. Disabling this may cause files to be moved back to a local folder,
     which can be disruptive to the user.
-  security_level: high
+  security_level: optional
   risk_level: none
-  risk_desc: The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption.
-    Disabling this sync is highly disruptive if the user relies on this feature.
+  risk_desc: 'The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption. Note - risk_level here reflects automation safety only, not workflow impact; on a personal device, losing this sync is a real usability cost, which is why this control is optional outside managed fleets. Disabling this sync is highly disruptive if the user relies on this feature.'
 - id: icloud-document-sync-disabled
-  description: Verifies that synchronization of documents and data for third-party apps with iCloud Drive is disallowed, ensuring
-    application-specific data remains local.
+  description: 'Enterprise-managed devices: mandatory. Personal devices: optional. Verifies that synchronization of documents and data for third-party apps with iCloud Drive is disallowed, ensuring
+    application-specific data remains local.'
   command: profiles -P -o stdout |grep -c 'allowCloudDocumentSync = 0;'
   expected: 1
   sudo: true
@@ -1486,13 +1519,12 @@ checksuites:
   affected_file: MDM Configuration Profile
   post_action: If enforced via MDM, no user action is needed. Disabling this will prevent application data synchronization
     across devices.
-  security_level: high
+  security_level: optional
   risk_level: none
-  risk_desc: The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption.
-    Disabling this sync will break application data synchronization across devices.
+  risk_desc: 'The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption. Note - risk_level here reflects automation safety only, not workflow impact; on a personal device, losing this sync is a real usability cost, which is why this control is optional outside managed fleets. Disabling this sync will break application data synchronization across devices.'
 - id: icloud-keychain-sync-disabled
-  description: Verifies that synchronization of the macOS Keychain (passwords and sensitive credentials) with iCloud Keychain
-    is disallowed, keeping credentials strictly local.
+  description: 'Mandatory on all devices, personal and managed: verifies that synchronization of the macOS Keychain (passwords
+    and sensitive credentials) with iCloud Keychain is disallowed, keeping credentials strictly local.'
   command: profiles -P -o stdout |grep -c 'allowCloudKeychainSync = 0;'
   expected: 1
   sudo: true
@@ -1507,8 +1539,8 @@ checksuites:
   risk_desc: The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption.
     Disabling this sync breaks password synchronization across devices, which may frustrate users.
 - id: icloud-mail-disabled
-  description: Verifies that synchronization of iCloud Mail with the device is disallowed, ensuring email data is not fetched
-    via an unapproved cloud service.
+  description: 'Enterprise-managed devices: mandatory. Personal devices: optional. Verifies that synchronization of iCloud Mail with the device is disallowed, ensuring email data is not fetched
+    via an unapproved cloud service.'
   command: profiles -P -o stdout |grep -c 'allowCloudMail = 0;'
   expected: 1
   sudo: true
@@ -1518,13 +1550,12 @@ checksuites:
   affected_file: MDM Configuration Profile
   post_action: If enforced via MDM, no user action is needed. Disabling this will prevent the user from accessing iCloud Mail
     on the machine.
-  security_level: baseline
+  security_level: optional
   risk_level: none
-  risk_desc: The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption.
-    Disabling this sync may prevent the user from accessing a legitimate email service.
+  risk_desc: 'The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption. Note - risk_level here reflects automation safety only, not workflow impact; on a personal device, losing this sync is a real usability cost, which is why this control is optional outside managed fleets. Disabling this sync may prevent the user from accessing a legitimate email service.'
 - id: icloud-notes-disabled
-  description: Verifies that synchronization of Notes with iCloud is disallowed, protecting potentially sensitive free-form
-    text data from unauthorized cloud storage.
+  description: 'Enterprise-managed devices: mandatory. Personal devices: optional. Verifies that synchronization of Notes with iCloud is disallowed, protecting potentially sensitive free-form
+    text data from unauthorized cloud storage.'
   command: profiles -P -o stdout |grep -c 'allowCloudNotes = 0;'
   expected: 1
   sudo: true
@@ -1533,13 +1564,12 @@ checksuites:
   fix_sudo: false
   affected_file: MDM Configuration Profile
   post_action: If enforced via MDM, no user action is needed. Disabling the sync will break note synchronization across devices.
-  security_level: baseline
+  security_level: optional
   risk_level: none
-  risk_desc: The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption.
-    Disabling this sync may break note availability across other Apple devices.
+  risk_desc: 'The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption. Note - risk_level here reflects automation safety only, not workflow impact; on a personal device, losing this sync is a real usability cost, which is why this control is optional outside managed fleets. Disabling this sync may break note availability across other Apple devices.'
 - id: icloud-photo-library-disabled
-  description: Verifies that synchronization of the Photo Library with iCloud Photos is disallowed, ensuring image and video
-    data remains local.
+  description: 'Enterprise-managed devices: mandatory. Personal devices: optional. Verifies that synchronization of the Photo Library with iCloud Photos is disallowed, ensuring image and video
+    data remains local.'
   command: profiles -P -o stdout |grep -c 'allowCloudPhotoLibrary = 0;'
   expected: 1
   sudo: true
@@ -1549,13 +1579,12 @@ checksuites:
   affected_file: MDM Configuration Profile
   post_action: If enforced via MDM, no user action is needed. Disabling the sync will prevent the user from accessing their
     full cloud photo library.
-  security_level: high
+  security_level: optional
   risk_level: none
-  risk_desc: The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption.
-    Disabling this sync may break photo synchronization across devices.
+  risk_desc: 'The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption. Note - risk_level here reflects automation safety only, not workflow impact; on a personal device, losing this sync is a real usability cost, which is why this control is optional outside managed fleets. Disabling this sync may break photo synchronization across devices.'
 - id: icloud-private-relay-disabled
-  description: Verifies that iCloud Private Relay is disallowed. This proxy service can interfere with content filtering,
-    security monitoring, and network forensics on corporate networks.
+  description: 'Mandatory on all devices, personal and managed: verifies that iCloud Private Relay is disallowed. This proxy
+    service can interfere with content filtering, security monitoring, and network forensics.'
   command: profiles -P -o stdout |grep -c 'allowCloudPrivateRelay = 0;'
   expected: 1
   sudo: true
@@ -1570,8 +1599,8 @@ checksuites:
   risk_desc: The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption.
     Disabling this feature ensures predictable network routing and traffic monitoring.
 - id: icloud-reminders-disabled
-  description: Verifies that synchronization of Reminders with iCloud is disallowed, protecting sensitive task and reminder
-    information from cloud storage.
+  description: 'Enterprise-managed devices: mandatory. Personal devices: optional. Verifies that synchronization of Reminders with iCloud is disallowed, protecting sensitive task and reminder
+    information from cloud storage.'
   command: profiles -P -o stdout |grep -c 'allowCloudReminders = 0;'
   expected: 1
   sudo: true
@@ -1581,13 +1610,12 @@ checksuites:
   affected_file: MDM Configuration Profile
   post_action: If enforced via MDM, no user action is needed. Disabling the sync will break reminder synchronization across
     devices.
-  security_level: baseline
+  security_level: optional
   risk_level: none
-  risk_desc: The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption.
-    Disabling this sync may break reminder availability across other Apple devices.
+  risk_desc: 'The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption. Note - risk_level here reflects automation safety only, not workflow impact; on a personal device, losing this sync is a real usability cost, which is why this control is optional outside managed fleets. Disabling this sync may break reminder availability across other Apple devices.'
 - id: icloud-freeform-disabled
-  description: Verifies that synchronization of the Freeform application data (macOS 13+) with iCloud is disallowed, protecting
-    sensitive collaboration content.
+  description: 'Enterprise-managed devices: mandatory. Personal devices: optional. Verifies that synchronization of the Freeform application data (macOS 13+) with iCloud is disallowed, protecting
+    sensitive collaboration content.'
   command: profiles -P -o stdout |grep -c 'allowCloudFreeform = 0;'
   expected: 1
   sudo: true
@@ -1596,7 +1624,7 @@ checksuites:
   affected_file: MDM Configuration Profile
   post_action: If enforced via MDM, no user action is needed. Disabling the sync will prevent Freeform synchronization across
     devices.
-  security_level: baseline
+  security_level: optional
   risk_level: none
   risk_desc: The check serves as a policy check. Disabling the sync may break Freeform collaboration across devices.
 
@@ -1784,7 +1812,8 @@ labels:
 - ai
 checksuites:
 - id: siri-disabled-check
-  description: Verifies that the Siri voice assistant is disabled to prevent audio recording and data transmission to Apple.
+  description: 'Mandatory on company systems handling regulated/sensitive data, optional elsewhere: verifies that the Siri
+    voice assistant is disabled to prevent audio recording and data transmission to Apple.'
   command: defaults read com.apple.Siri StatusMenuVisible 2>/dev/null | grep -c 0
   expected: 1
   sudo: false
@@ -1792,15 +1821,19 @@ checksuites:
   fix_sudo: false
   affected_file: ~/Library/Preferences/com.apple.Siri.plist
   post_action: None.
-  security_level: mandatory
+  security_level: optional
   arch:
   - amd64
   - arm64
   risk_level: medium
-  risk_desc: Siri processes voice data and context. Even without Apple Intelligence, standard Siri requests may be processed
-    off-device.
+  risk_desc: 'Siri processes voice data and context; a meaningful share of requests are handled on-device, and off-device
+    requests that need more compute go through Private Cloud Compute (PCC), whose architecture and attestations are published
+    for external review rather than being an unverifiable pipeline. This lowers, but does not eliminate, the risk versus
+    a generic third-party cloud service. On systems where no third-party processing path is acceptable regardless of design,
+    disable Siri.'
 - id: ai-system-global-disable-check
-  description: Verifies that the Apple Intelligence system is globally disabled. Checks for an explicit 'false' value.
+  description: 'Mandatory on company systems handling regulated/sensitive data, optional elsewhere: verifies that the Apple
+    Intelligence system is globally disabled. Checks for an explicit ''false'' value.'
   command: defaults read com.apple.Siri AppleIntelligenceEnabled 2>/dev/null | grep -c 0
   expected: 1
   sudo: false
@@ -1808,15 +1841,18 @@ checksuites:
   fix_sudo: false
   affected_file: ~/Library/Preferences/com.apple.Siri.plist
   post_action: Logout/Login required.
-  security_level: critical
+  security_level: optional
   arch:
   - amd64
   - arm64
-  risk_level: high
-  risk_desc: Apple Intelligence features may transmit data to Private Cloud Compute. In high-security environments, this risk
-    is unacceptable.
+  risk_level: medium
+  risk_desc: 'Apple Intelligence offloads requests beyond on-device capability to Private Cloud Compute (PCC), a published,
+    attested architecture with no data retention after the response, rather than a general-purpose cloud backend. For company
+    systems where no third-party processing path is acceptable regardless of its design (e.g., regulated data), disable this
+    globally; elsewhere, treat it as a design trade-off rather than an unacceptable risk by default.'
 - id: ai-write-access-disable-check
-  description: Verifies that AI Writing Tools are disabled.
+  description: 'Mandatory on company systems handling regulated/sensitive data, optional elsewhere: verifies that AI Writing
+    Tools are disabled.'
   command: defaults read com.apple.Siri WriteToolsEnabled 2>/dev/null | grep -c 0
   expected: 1
   sudo: false
@@ -1824,12 +1860,13 @@ checksuites:
   fix_sudo: false
   affected_file: ~/Library/Preferences/com.apple.Siri.plist
   post_action: Logout/Login required.
-  security_level: high
+  security_level: optional
   arch:
   - amd64
   - arm64
   risk_level: medium
   risk_desc: Prevents generative text processing which could inadvertently expose sensitive corporate data to the model context.
+    Same PCC caveat as above applies; disable where any third-party processing path is unacceptable, leave enabled otherwise.
 
 ---
 
