@@ -178,7 +178,8 @@ checksuites:
 - id: filevault-recovery-present-check
   description: Ensures a valid recovery method (Personal Recovery Key or Institutional Key) is active. For Apple Silicon,
     a Personal Recovery Key (PRK) is required.
-  command: 'fdesetup status -extended | grep -E -c ''Has (Personal|Institutional) Recovery Key: Yes'''
+  command: |
+    diskutil apfs listUsers / | grep -Eci 'Personal Recovery User|Institutional'
   expected: 1
   sudo: true
   fix: 'Manual action required: Generate a new recovery key via MDM or `fdesetup changerecovery`.'
@@ -530,8 +531,18 @@ checksuites:
 - id: passkey-sync-disallowed-check
   description: Verifies that Passkey synchronization via unmanaged iCloud Keychain is disallowed. This prevents corporate
     credentials from syncing to personal cloud accounts.
-  command: sudo profiles -P 2>/dev/null | grep -c 'DisableiCloudKeychainSync'
-  expected: 1
+  command: |
+    profile_xml=$(sudo profiles show -type configuration -output stdout-xml) || exit $?
+    result=$(printf '%s\n' "$profile_xml" |
+      /usr/bin/xmllint --xpath \
+        'boolean(//dict/key[.="allowCloudKeychainSync"]/following-sibling::*[1][self::false])' \
+        -) || exit $?
+    case "$result" in
+      true) printf '1\n' ;;
+      false) printf '0\n' ;;
+      *) printf 'Unexpected XML parser output\n' >&2; exit 1 ;;
+    esac
+  expected: "1"
   sudo: true
   fix: 'Manual action required: Disable iCloud Keychain synchronization manually (System Settings > Apple ID > iCloud > Passwords
     & Keychain) OR configure an MDM profile.'

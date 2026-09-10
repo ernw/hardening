@@ -520,7 +520,7 @@ If you are not signed into iCloud, macOS will automatically generate a recovery 
 
 <figure>
 <img src="img/01_07_FileVault_02.png" style="width:55.0%" />
-<figcaption>The generated Recovery Key must be saved secureley.</figcaption>
+<figcaption>The generated Recovery Key must be saved securely.</figcaption>
 </figure>
 
 After clicking *Continue*, FileVault starts encrypting the disk. The status of FileVault will change to *On*.
