@@ -328,7 +328,7 @@ checksuites:
 - id: secure-token-enabled-check
   description: Verifies that the Secure Token is enabled for the current administrative user, which grants Volume Ownership
     necessary for FileVault and system integrity changes.
-  command: sysadminctl -secureTokenStatus $(id -un) 2>/dev/null | grep -c 'ENABLED'
+  command: sysadminctl -secureTokenStatus "$(stat -f%Su /dev/console)" 2>&1 | grep -c 'ENABLED'
   expected: 1
   sudo: true
   fix: 'Manual action required: Grant Secure Token via System Settings or `sysadminctl -secureTokenOn <username>`.'
