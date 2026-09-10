@@ -379,10 +379,27 @@ checksuites:
 - id: strong-password-policy-enforced
   description: 'Verifies that the global password policy enforces a strong baseline: at least 16 characters, mixed case, numeric,
     symbol, and limits failed login attempts to 5.'
-  command: sudo pwpolicy -getglobalpolicy | grep -E 'minChars=1[6-9]|minChars=[2-9][0-9]|minChars=[0-9]{3,}' | wc -l && sudo
-    pwpolicy -getglobalpolicy | grep -c requiresSymbol=1 && sudo pwpolicy -getglobalpolicy | grep -c requiresMixedCase=1 &&
-    sudo pwpolicy -getglobalpolicy | grep -c requiresNumeric=1 && sudo pwpolicy -getglobalpolicy | grep -E -c 'maxFailedLoginAttempts=[1-5]($|[^0-9])'
-  expected: 5
+  command: |
+    policy=$(sudo pwpolicy -getglobalpolicy) || exit $?
+    printf '%s\n' "$policy" | awk '
+      {
+        for (i = 1; i <= NF; i++) {
+          split($i, p, "=")
+          if (p[1] == "minChars" &&
+              p[2] ~ /^[0-9]+$/ && p[2]+0 >= 16) lengthOK=1
+          if ($i == "requiresSymbol=1") symbolOK=1
+          if ($i == "requiresMixedCase=1") mixedOK=1
+          if ($i == "requiresNumeric=1") numericOK=1
+          if (p[1] == "maxFailedLoginAttempts" &&
+              p[2] ~ /^[0-9]+$/ &&
+              p[2]+0 >= 1 && p[2]+0 <= 5) attemptsOK=1
+        }
+      }
+      END {
+        print lengthOK + symbolOK + mixedOK + numericOK + attemptsOK
+      }
+    '
+  expected: "5"
   sudo: true
   fix: sudo pwpolicy -setglobalpolicy 'minChars=16 requiresNumeric=1 requiresSymbol=1 requiresMixedCase=1 usingHistory=5 maxFailedLoginAttempts=5'
   fix_sudo: true
