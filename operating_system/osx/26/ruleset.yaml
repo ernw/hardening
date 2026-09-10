@@ -748,7 +748,7 @@ checksuites:
 - id: ntp-service-enabled
   description: Verifies that Network Time synchronization is enabled, which ensures the system clock is automatically and
     accurately maintained.
-  command: 'systemsetup -getnetworktimeserver |grep -c ''Network Time: On'''
+  command: 'systemsetup -getusingnetworktime |grep -c ''Network Time: On'''
   expected: 1
   sudo: true
   fix: sudo systemsetup -setusingnetworktime on
