@@ -1386,7 +1386,7 @@ To verify your system is using the strongest method:
 
 ### Minimum Password Length
 
-Short passwords are vulnerable to automated guessing. A minimum length of *14 characters* is the mandatory floor; *16* is recommended and is the value used in the Password Policy table above. Longer values are always acceptable; the automated check treats 14 as a minimum, not as an exact target, so a stricter local policy will not be reported as a failure.
+Short passwords are vulnerable to automated guessing. The minimum length MUST be at least *16 characters*, the value used in the Password Policy table above. Longer values are always acceptable; the automated check treats 16 as a minimum, not as an exact target, so a stricter local policy will not be reported as a failure.
 
 This is managed via the *pwquality* module. You can check your current requirement here:
 

@@ -965,13 +965,13 @@ labels:
 - auth
 checksuites:
 - id: 40-auth-02-pass-complexity
-  description: Ensure password complexity enforces a minimum length of at least 14 characters (16 recommended).
+  description: Ensure password complexity enforces a minimum length of at least 16 characters.
   command: |
     v=$(grep -rhE '^[[:space:]]*minlen[[:space:]]*=' \
           /etc/security/pwquality.conf /etc/security/pwquality.conf.d/ 2>/dev/null \
         | tail -n1 | tr -dc '0-9')
     [ -n "$v" ] || { echo 0; exit 0; }
-    [ "$v" -ge 14 ] && echo 1 || echo 0
+    [ "$v" -ge 16 ] && echo 1 || echo 0
   expected: 1
   sudo: true
   fix: sudo sed -i '/^[[:space:]]*minlen/d' /etc/security/pwquality.conf && echo 'minlen = 16' | sudo tee -a /etc/security/pwquality.conf
