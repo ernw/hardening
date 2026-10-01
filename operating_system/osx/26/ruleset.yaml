@@ -506,9 +506,15 @@ checksuites:
   command: security authorizationdb read system.preferences 2> /dev/null | grep -A 1 '<key>shared</key>' | grep -c '<false/>'
   expected: 1
   sudo: false
-  fix: sudo /usr/bin/security authorizationdb read system.preferences > /tmp/system.preferences.plist && sudo /usr/bin/defaults
-    write /tmp/system.preferences.plist shared -bool false && sudo /usr/bin/security authorizationdb write system.preferences
-    < /tmp/system.preferences.plist && sudo rm -f /tmp/system.preferences.plist
+  fix: |
+    d=$(mktemp -d) || exit 1
+    p="$d/system.preferences.plist"
+    sudo /usr/bin/security authorizationdb read system.preferences > "$p" &&
+      sudo /usr/bin/defaults write "$p" shared -bool false &&
+      sudo /usr/bin/security authorizationdb write system.preferences < "$p"
+    rc=$?
+    rm -rf "$d"
+    exit $rc
   fix_sudo: true
   affected_file: /var/db/auth.db
   post_action: No restart required. The change takes effect immediately, requiring an admin password to change System Settings.
