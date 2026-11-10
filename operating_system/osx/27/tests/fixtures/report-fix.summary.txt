@@ -1,0 +1,10 @@
+== report-fix.json
+type=fix incomplete=false
+counts: error=1 fix_not_effective=1 fixed=1 manual=1 missing_command=1 passed=1 skipped_level=1
+ERROR (1):
+  - error-check [Demo]: command exited with code 3
+FIX_NOT_EFFECTIVE (1):
+  - fail-check [Demo]: Fix for check fail-check ran, but the check still fails (expected "1", got "0").
+MISSING_COMMAND (1):
+  - missing-check [Demo]: required command "nonexistent-tool" not found
+

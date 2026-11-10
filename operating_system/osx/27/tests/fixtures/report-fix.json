@@ -1,0 +1,89 @@
+{
+  "timestamp": "2026-11-10T12:00:00+01:00",
+  "os": "darwin",
+  "arch": "arm64",
+  "distro": "",
+  "suite_results": [
+    {
+      "title": "Demo",
+      "checks": [
+        {
+          "id": "pass-check",
+          "description": "passes",
+          "passed": true,
+          "fix_applied": false,
+          "output": "1",
+          "skipped": false,
+          "skipped_distro": false,
+          "skipped_missing": false
+        },
+        {
+          "id": "fail-check",
+          "description": "fails",
+          "passed": false,
+          "fix_applied": true,
+          "output": "Fix for check fail-check ran, but the check still fails (expected \"1\", got \"0\").",
+          "skipped": false,
+          "skipped_distro": false,
+          "skipped_missing": false
+        },
+        {
+          "error": "command exited with code 3",
+          "id": "error-check",
+          "description": "errors",
+          "passed": false,
+          "fix_applied": false,
+          "output": "command exited with code 3",
+          "skipped": false,
+          "skipped_distro": false,
+          "skipped_missing": false
+        },
+        {
+          "manual": true,
+          "id": "manual-check",
+          "description": "manual",
+          "passed": true,
+          "fix_applied": false,
+          "output": "Manual action required: look at it",
+          "skipped": false,
+          "skipped_distro": false,
+          "skipped_missing": false
+        },
+        {
+          "skip_reason": "required command \"nonexistent-tool\" not found",
+          "id": "missing-check",
+          "description": "missing",
+          "passed": false,
+          "fix_applied": false,
+          "output": "required command \"nonexistent-tool\" not found",
+          "skipped": false,
+          "skipped_distro": false,
+          "skipped_missing": true
+        },
+        {
+          "skip_reason": "requires security level \"high\"; selected level is \"baseline\"",
+          "id": "high-check",
+          "description": "high",
+          "passed": false,
+          "fix_applied": false,
+          "output": "requires security level \"high\"; selected level is \"baseline\"",
+          "skipped": true,
+          "skipped_distro": false,
+          "skipped_missing": false
+        },
+        {
+          "id": "fixable-check",
+          "description": "fixable via file",
+          "passed": false,
+          "fix_applied": true,
+          "fix_verified": true,
+          "output": "",
+          "skipped": false,
+          "skipped_distro": false,
+          "skipped_missing": false
+        }
+      ]
+    }
+  ],
+  "report_type": "fix"
+}

@@ -1,0 +1,1922 @@
+preconditions:
+  tools:
+  - grep
+  - awk
+  - sed
+
+---
+
+title: Secure Boot (Apple Silicon)
+os: darwin
+arch:
+- arm64
+labels:
+- boot
+checksuites:
+- id: bputil-smb0-full-security-check
+  description: Checks the status of the 'smb0' setting (Secure Boot Policy) via bputil on Apple Silicon Macs (arm64), expecting
+    'Full Security' (represented by 'Full'). This is a low-level check for the highest boot security. Apple Silicon only;
+    bputil reports "not yet supported on this platform" when run on Intel.
+  command: sudo bputil -d | grep '(smb0)' | grep -c 'Full'
+  expected: 1
+  sudo: true
+  fix: 'Manual action required: Set the Secure Boot to "Full Security" in Startup Security Utility (requires Recovery Mode).'
+  fix_sudo: true
+  affected_file: N/A
+  post_action: Restart Mac and enter Recovery Mode (press and hold Power button during startup on Apple Silicon) -> Utilities
+    -> Startup Security Utility. Select the desired volume and set the security mode to Full Security.
+  security_level: high
+  risk_level: low
+  risk_desc: The remediation is manual (via Startup Security Utility) and involves a core boot setting. Setting to 'Full Security'
+    may prevent booting into older or unverified macOS versions or non-Apple operating systems.
+
+---
+
+title: Ensure System Integrity Protection Is Enabled
+os: darwin
+arch:
+- arm64
+labels:
+- boot
+checksuites:
+- id: sip-enabled-check
+  description: Verifies that System Integrity Protection (SIP) is enabled. SIP restricts the root user and prevents modification
+    of protected files and directories, enhancing OS security.
+  command: 'csrutil status | grep -c ''System Integrity Protection status: enabled.'''
+  expected: 1
+  sudo: true
+  fix: 'Manual action required: Reboot into Recovery Mode (Cmd+R or press and hold Power button on Apple Silicon) and run:
+    csrutil enable'
+  fix_sudo: true
+  affected_file: N/A
+  post_action: Restart Mac. Changes to SIP are only possible in Recovery Mode and require a system reboot.
+  security_level: high
+  risk_level: low
+  risk_desc: The remediation is manual and requires a reboot into Recovery Mode. If applied, the only risk is that legitimate
+    system-level utilities or customizations that require SIP to be disabled will stop functioning.
+
+---
+
+title: Ensure System Volume Is Read-Only
+os: darwin
+arch:
+- arm64
+labels:
+- boot
+checksuites:
+- id: signed-system-volume-writable-check
+  description: 'Confirms that the System Volume is read-only (''Writable: No''). This is a core component of the Signed System
+    Volume (SSV) feature, ensuring the integrity of system files.'
+  command: |
+    system_profiler SPStorageDataType | awk '/Mount Point: \/$/{x=NR+2}(NR==x)' |grep -c 'Writable: No'
+  expected: 1
+  sudo: true
+  fix: sudo /usr/bin/kmutil trigger-snapshot
+  fix_sudo: true
+  affected_file: N/A
+  post_action: 'If a fix was applied, a reboot is typically required to ensure the snapshot is active and the volume is sealed.
+    Note: Manual modification of the sealed volume is generally an extreme measure that breaks security.'
+  security_level: high
+  risk_level: medium
+  risk_desc: The manual fix uses 'kmutil trigger-snapshot' which rebuilds the sealed system volume. If done incorrectly or
+    if the system was previously heavily customized, this could cause system instability or prevent the system from booting
+    into the correct state.
+
+---
+
+title: Enable Authenticated Root
+os: darwin
+arch:
+- arm64
+labels:
+- boot
+checksuites:
+- id: authenticated-root-enabled-check
+  description: Verifies that the Authenticated Root feature (part of SSV) is enabled. This ensures the system only boots from
+    a cryptographically signed snapshot of the system volume.
+  command: 'csrutil authenticated-root status|grep -c ''Authenticated Root status: enabled'''
+  expected: 1
+  sudo: true
+  fix: 'Manual action required: Reboot into Recovery Mode and run: csrutil authenticated-root enable'
+  fix_sudo: true
+  affected_file: N/A
+  post_action: Restart Mac. Re-enabling the Authenticated Root requires a reboot into the new sealed state.
+  security_level: high
+  risk_level: low
+  risk_desc: The remediation is manual and requires a reboot into Recovery Mode. The risk is minimal unless a custom configuration
+    was in place, in which case re-enabling this feature will prevent the system from booting from an unsigned root volume.
+
+---
+
+title: Gatekeeper
+os: darwin
+arch:
+- arm64
+labels:
+- system
+checksuites:
+- id: gatekeeper-assessments-enabled
+  description: Ensures that Gatekeeper assessments are enabled. Gatekeeper enforces security policies for downloaded applications,
+    preventing the execution of unapproved software.
+  command: spctl --status --verbose |grep -c 'assessments enabled'
+  expected: 1
+  sudo: false
+  fix: sudo spctl --master-enable
+  fix_sudo: true
+  affected_file: N/A
+  post_action: The fix is immediate. No manual restart is typically required.
+  security_level: baseline
+  risk_level: very low
+  risk_desc: The fix is a standard system-level policy restore and is immediate. The risk is minimal, as it only restores
+    default Gatekeeper behavior, which may only disrupt the installation of unsigned/unapproved applications.
+- id: gatekeeper-developer-id-enabled
+  description: Verifies that the Developer ID policy is enabled within Gatekeeper. This requires downloaded applications to
+    be signed by an identified Apple Developer.
+  command: spctl --status --verbose |grep -c 'developer id enabled'
+  expected: 1
+  sudo: false
+  fix: sudo spctl --master-enable
+  fix_sudo: true
+  affected_file: N/A
+  post_action: The fix is immediate. No manual restart is typically required. The master-enable command restores all default
+    Gatekeeper checks.
+  security_level: baseline
+  risk_level: very low
+  risk_desc: The fix is a standard system-level policy restore and is immediate. The risk is minimal, as it only restores
+    default Gatekeeper behavior, which may only disrupt the installation of unsigned/unapproved applications.
+
+---
+
+title: FileVault
+os: darwin
+arch:
+- arm64
+labels:
+- filesystem
+checksuites:
+- id: filevault-disk-encryption-status
+  description: Verifies that FileVault is enabled, ensuring full-disk encryption of the startup volume. This protects data
+    at rest if the computer is lost or stolen.
+  command: fdesetup status |grep -c 'FileVault is On.'
+  expected: 1
+  sudo: false
+  fix: sudo fdesetup enable
+  fix_sudo: true
+  affected_file: N/A
+  post_action: Enabling FileVault will require a user password and may require a recovery key to be saved. A system reboot
+    is required for the encryption process to begin.
+  security_level: high
+  risk_level: high
+  risk_desc: The remediation initiates full-disk encryption. If the user loses the FileVault password and the recovery key,
+    all data on the disk will be permanently inaccessible. The encryption process itself is resource-intensive but generally
+    safe.
+- id: filevault-recovery-present-check
+  description: Ensures a valid recovery method (Personal Recovery Key or Institutional Key) is active. For Apple Silicon,
+    a Personal Recovery Key (PRK) is required.
+  command: diskutil apfs listUsers / | grep -c -Ei 'Personal Recovery User|Institutional'
+  expected: 1
+  sudo: true
+  fix: 'Manual action required: Generate a new recovery key via MDM or `fdesetup changerecovery`.'
+  fix_sudo: true
+  affected_file: N/A
+  post_action: Ensure the key is escrowed to the ERNW MDM or secured offline.
+  security_level: baseline
+  risk_level: medium
+  risk_desc: Without a recovery key, data is permanently lost if the user forgets their password.
+  expected_op: '>='
+
+---
+
+title: Disable System Diagnostic and Usage Data Reporting
+os: darwin
+arch:
+- arm64
+labels:
+- privacy
+checksuites:
+- id: crashreporter-auto-submit-disabled
+  description: Ensures that automatic submission of diagnostic and usage data to Apple is disabled, reducing potential exposure
+    of system details via crash logs.
+  command: defaults read /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory.plist AutoSubmit
+  expected: 0
+  sudo: false
+  fix: sudo defaults write /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory.plist AutoSubmit -bool false
+  fix_sudo: true
+  affected_file: /Library/Application Support/CrashReporter/DiagnosticMessagesHistory.plist
+  post_action: No system restart required. The setting takes effect immediately for future crash reports.
+  security_level: baseline
+  risk_level: very low
+  risk_desc: The fix changes a standard configuration file setting. The risk is negligible; the only change is that crash
+    logs will not be automatically sent to Apple.
+- id: crashreporter-thirdparty-submit-disabled
+  description: Verifies that the submission of diagnostic data for third-party developers is disabled, further restricting
+    the sharing of potentially sensitive data.
+  command: sudo defaults read /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory.plist ThirdPartyDataSubmit
+  expected: 0
+  sudo: true
+  fix: sudo defaults write /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory.plist ThirdPartyDataSubmit
+    -int 0
+  fix_sudo: true
+  affected_file: /Library/Application Support/CrashReporter/DiagnosticMessagesHistory.plist
+  post_action: No system restart required. The setting takes effect immediately for future crash reports.
+  security_level: baseline
+  risk_level: very low
+  risk_desc: The fix changes a standard configuration file setting. The risk is negligible; the only change is that crash
+    logs for third-party apps will not be automatically sent to developers.
+- id: siri-data-sharing-disabled
+  description: Checks if Siri Data Sharing is disabled (expected value '2' after opting out), which prevents the sending of
+    user-associated data to Apple for service improvement.
+  command: defaults read ~/Library/Preferences/com.apple.assistant.support 'Siri Data Sharing Opt-In Status'
+  expected: 2
+  sudo: false
+  fix: 'Manual action required: Navigate to System Settings > Siri & Spotlight > Siri Suggestions & Privacy > Analytics &
+    Improvements and disable ''Share Siri & Dictation Audio Recording''.'
+  fix_sudo: false
+  affected_file: ~/Library/Preferences/com.apple.assistant.support.plist
+  post_action: This setting is user-specific and best changed via the GUI in System Settings to ensure proper communication
+    to the user about data privacy settings.
+  security_level: baseline
+  risk_level: none
+  risk_desc: The remediation is entirely manual and user-specific via the GUI. There is no risk of automated breakage. The
+    only consequence is the loss of personal data sharing with Apple for Siri/Dictation improvement.
+
+---
+
+title: Lockdown Mode (Optional)
+os: darwin
+arch:
+- arm64
+labels:
+- system
+checksuites:
+- id: lockdown-mode-enabled-check
+  description: Verifies that Lockdown Mode is enabled for the current user, providing extreme protection against sophisticated
+    digital threats.
+  command: defaults read ~/Library/Preferences/.GlobalPreferences.plist LDMGlobalEnabled 2>/dev/null
+  expected: 1
+  sudo: false
+  fix: 'Manual action required: Activate Lockdown Mode via System Settings -> Privacy & Security -> Lockdown Mode.'
+  fix_sudo: false
+  affected_file: ~/Library/Preferences/.GlobalPreferences.plist
+  post_action: Restart Mac to apply all Lockdown Mode restrictions.
+  security_level: high
+  risk_level: high
+  risk_desc: This setting is highly restrictive and is only recommended for users at high risk of targeted attacks. It significantly
+    impacts functionality, including web browsing, messaging, and connecting accessories, which may be disruptive for standard
+    business use.
+
+---
+
+title: External Accessory
+os: darwin
+arch:
+- arm64
+labels:
+- system
+checksuites:
+- id: usb-restricted-mode-enabled
+  description: 'Verifies that USB Accessory Security (Restricted Mode) is active, requiring user approval before accessories
+    can communicate when the Mac is locked. NOTE: This feature only exists on Apple Silicon laptops (MacBook Air/Pro). It
+    is not available on desktop Macs (Mac mini, iMac, Mac Pro, Mac Studio). On those systems this check passes as not applicable.'
+  command: if [ -f /Library/Preferences/com.apple.accessd.plist ]; then defaults read /Library/Preferences/com.apple.accessd
+    USBAccessories 2>/dev/null | grep -c 'Ask'; else echo 1; fi
+  expected: 1
+  sudo: true
+  fix: |
+    sudo defaults write /Library/Preferences/com.apple.accessd USBAccessories -string 'Ask'
+  fix_sudo: true
+  affected_file: /Library/Preferences/com.apple.accessd.plist
+  post_action: None. Policy is enforced via CLI.
+  security_level: baseline
+  risk_level: low
+  risk_desc: 'Feature is laptop-only (Apple Silicon MacBook). On desktop Macs, com.apple.accessd does not exist and this check
+    is not applicable. On laptops: requires user approval for accessories on a locked Mac, reducing physical attack surface.'
+
+---
+
+title: Volume Ownership (Secure Token)
+os: darwin
+arch:
+- arm64
+labels:
+- auth
+checksuites:
+- id: secure-token-enabled-check
+  description: Verifies that the Secure Token is enabled for the current administrative user, which grants Volume Ownership
+    necessary for FileVault and system integrity changes.
+  command: sysadminctl -secureTokenStatus "$(stat -f%Su /dev/console)" 2>&1 | grep -c 'ENABLED'
+  expected: 1
+  sudo: true
+  fix: 'Manual action required: Grant Secure Token via System Settings or `sysadminctl -secureTokenOn <username>`.'
+  fix_sudo: true
+  affected_file: N/A
+  post_action: Secure Token is granted automatically upon first login after OS installation, provided the user is an administrator
+    and FileVault is enabled.
+  security_level: baseline
+  risk_level: high
+  risk_desc: Without a Secure Token, the user cannot enable or manage FileVault, or authorize low-level system integrity changes,
+    rendering the system non-compliant and vulnerable to physical attacks.
+
+---
+
+title: System Extensions and Driver Management
+os: darwin
+arch:
+- arm64
+labels:
+- system
+checksuites:
+- id: unauthorized-system-extensions-check
+  description: Verifies that no third-party System Extensions (non-Apple) are currently loaded on the system, minimizing the
+    kernel attack surface.
+  command: systemextensionsctl list | grep -E -v '^(com.apple|PID|--)' | wc -l | tr -d '[:space:]'
+  expected: 0
+  sudo: false
+  fix: 'Manual action required: Identify and remove unauthorized System Extensions via System Settings or the corresponding
+    application.'
+  fix_sudo: false
+  affected_file: N/A
+  post_action: Restart Mac if necessary to unload the extension. This check does not verify extensions managed via MDM.
+  security_level: high
+  risk_level: medium
+  risk_desc: A running, unauthorized extension can gain deep system access. The remediation requires knowing which application
+    installed the extension.
+- id: launchd-plists-not-quarantined
+  description: No service definition in /Library/LaunchDaemons, /Library/LaunchAgents or ~/Library/LaunchAgents carries the
+    com.apple.quarantine attribute. macOS 27 refuses to load such files; their presence indicates a downloaded, unvetted service
+    definition.
+  command: for f in /Library/LaunchDaemons/*.plist /Library/LaunchAgents/*.plist "$HOME"/Library/LaunchAgents/*.plist; do
+    [ -e "$f" ] && xattr -p com.apple.quarantine "$f" >/dev/null 2>&1 && echo "$f"; done | grep -c .
+  expected: 0
+  sudo: false
+  fix: 'Manual action required: Investigate the listed files. Do not remove the quarantine attribute from service definitions
+    of unknown provenance.'
+  fix_sudo: false
+  affected_file: N/A
+  post_action: None.
+  security_level: baseline
+  risk_level: none
+  risk_desc: Check only.
+
+---
+
+title: Ensure Password Security - Password Policy
+os: darwin
+arch:
+- arm64
+labels:
+- auth
+checksuites:
+- id: strong-password-policy-enforced
+  description: 'Verifies that the global password policy enforces a strong baseline: at least 16 characters, mixed case, numeric,
+    symbol, and limits failed login attempts to 5.'
+  command: |
+    policy=$(sudo pwpolicy -getglobalpolicy) || exit $?
+    printf '%s\n' "$policy" | awk '
+      {
+        for (i = 1; i <= NF; i++) {
+          split($i, p, "=")
+          if (p[1] == "minChars" &&
+              p[2] ~ /^[0-9]+$/ && p[2]+0 >= 16) lengthOK=1
+          if ($i == "requiresSymbol=1") symbolOK=1
+          if ($i == "requiresMixedCase=1") mixedOK=1
+          if ($i == "requiresNumeric=1") numericOK=1
+          if (p[1] == "maxFailedLoginAttempts" &&
+              p[2] ~ /^[0-9]+$/ &&
+              p[2]+0 >= 1 && p[2]+0 <= 5) attemptsOK=1
+        }
+      }
+      END {
+        print lengthOK + symbolOK + mixedOK + numericOK + attemptsOK
+      }
+    '
+  expected: '5'
+  sudo: true
+  fix: sudo pwpolicy -setglobalpolicy 'minChars=16 requiresNumeric=1 requiresSymbol=1 requiresMixedCase=1 usingHistory=5 maxFailedLoginAttempts=5'
+  fix_sudo: true
+  affected_file: N/A
+  post_action: Inform users of the new policy before enforcement. New users will be immediately subject to the policy; existing
+    users will be prompted on their next password change.
+  security_level: baseline
+  risk_level: moderate
+  risk_desc: Misconfiguring global password policy can unintentionally prevent users from logging in or enforcing overly strict
+    requirements that are easily forgotten, potentially leading to increased IT support calls.
+
+---
+
+title: Disable Guest Accounts
+os: darwin
+arch:
+- arm64
+labels:
+- auth
+checksuites:
+- id: loginwindow-guest-disabled
+  description: Ensures the Guest user account is disabled on the login screen, preventing unauthenticated access to the system,
+    temporary profiles, or shared resources.
+  command: defaults read /Library/Preferences/com.apple.loginwindow GuestEnabled
+  expected: 0
+  sudo: false
+  fix: sudo defaults write /Library/Preferences/com.apple.loginwindow GuestEnabled -bool false
+  fix_sudo: true
+  affected_file: /Library/Preferences/com.apple.loginwindow.plist
+  post_action: No restart required. The login window will reflect the change after the next user session starts or upon reboot.
+  security_level: baseline
+  risk_level: low
+  risk_desc: The automated fix is a standard 'defaults' command. The only risk is blocking intended guest access if required
+    for business operations (e.g., public kiosks).
+
+---
+
+title: Restrict Sudoers File
+os: darwin
+arch:
+- arm64
+labels:
+- auth
+checksuites:
+- id: sudo-tty-tickets-enabled
+  description: Verifies that sudo credential caching is scoped per terminal (timestamp_type=tty, formerly 'tty_tickets').
+    Evaluated with 'sudo -V', which includes /etc/sudoers.d drop-ins.
+  command: 'sudo -V | awk -F'': '' ''/Type of authentication timestamp record/{print $2}'''
+  expected: tty
+  sudo: true
+  fix: tmp=$(mktemp) && printf 'Defaults timestamp_timeout=15\nDefaults timestamp_type=tty\n' > "$tmp" && /usr/sbin/visudo
+    -cf "$tmp" && install -m 0440 -o root -g wheel "$tmp" /etc/sudoers.d/10_ernw_hardening; rm -f "$tmp"
+  fix_sudo: true
+  affected_file: /etc/sudoers.d/10_ernw_hardening
+  post_action: The fix is immediate. The drop-in file is validated with visudo before it is installed.
+  security_level: high
+  risk_level: medium
+  risk_desc: The fix writes a separate, visudo-validated drop-in file instead of editing /etc/sudoers, so a syntax error cannot
+    lock out sudo.
+- id: sudo-password-timeout-bounded
+  description: Verifies that the 'timestamp_timeout' for sudo is bounded to a short window (15 minutes) rather than uncapped.
+    Combined with tty_tickets, this scopes cached credentials to the current TTY for a limited time; the threat it defends
+    against (an attacker using an already-authenticated shell on an unattended, unlocked machine) is already covered by the
+    screensaver lock policy, so a value of 0 (a prompt on every single 'sudo' call) is available as a stricter option but
+    not the default.
+  command: 'sudo -V | grep -c ''Authentication timestamp timeout: 15.0 minutes'''
+  expected: 1
+  sudo: true
+  fix: tmp=$(mktemp) && printf 'Defaults timestamp_timeout=15\nDefaults timestamp_type=tty\n' > "$tmp" && /usr/sbin/visudo
+    -cf "$tmp" && install -m 0440 -o root -g wheel "$tmp" /etc/sudoers.d/10_ernw_hardening; rm -f "$tmp"
+  fix_sudo: true
+  affected_file: /etc/sudoers.d/10_ernw_hardening
+  post_action: The fix is immediate. For a stricter posture, set timestamp_timeout=0 in /etc/sudoers.d/10_ernw_hardening.
+  security_level: baseline
+  risk_level: medium
+  risk_desc: The fix writes a separate, visudo-validated drop-in file instead of editing /etc/sudoers.
+
+---
+
+title: Require Administrator Password
+os: darwin
+arch:
+- arm64
+labels:
+- auth
+checksuites:
+- id: system-preferences-lockdown
+  description: 'Checks if the ''system.preferences'' authorization right is set to require an administrator password (shared
+    = false). This prevents standard users from changing system settings that affect the entire computer. Note: ''security
+    authorizationdb write'' only accepts allow/deny/a named rule as a positional argument, or a complete plist via stdin;
+    it cannot take an inline XML fragment as an argument (the previous version of this fix tried to, and always failed with
+    a usage error). The correct approach, confirmed against Apple''s own CIS benchmark remediation, is read the full right
+    to a temp file, flip the shared key there, then write the whole plist back.'
+  command: security authorizationdb read system.preferences 2> /dev/null | grep -A 1 '<key>shared</key>' | grep -c '<false/>'
+  expected: 1
+  sudo: false
+  fix: |
+    d=$(mktemp -d) || exit 1
+    p="$d/system.preferences.plist"
+    sudo /usr/bin/security authorizationdb read system.preferences > "$p" &&
+      sudo /usr/bin/defaults write "$p" shared -bool false &&
+      sudo /usr/bin/security authorizationdb write system.preferences < "$p"
+    rc=$?
+    rm -rf "$d"
+    exit $rc
+  fix_sudo: true
+  affected_file: /var/db/auth.db
+  post_action: No restart required. The change takes effect immediately, requiring an admin password to change System Settings.
+    The temporary plist is removed as the last step of the fix.
+  security_level: baseline
+  risk_level: low
+  risk_desc: The automated fix uses a standard security utility to modify authorization rights. The risk is low; the only
+    impact is that standard users lose the ability to change some non-critical system preferences.
+
+---
+
+title: Passkeys and FIDO2 Hardening
+os: darwin
+arch:
+- arm64
+labels:
+- auth
+checksuites:
+- id: passkey-sync-disallowed-check
+  description: Verifies that Passkey synchronization via unmanaged iCloud Keychain is disallowed. This prevents corporate
+    credentials from syncing to personal cloud accounts.
+  command: |
+    profile_xml=$(sudo profiles show -type configuration -output stdout-xml) || exit $?
+    result=$(printf '%s\n' "$profile_xml" |
+      /usr/bin/xmllint --xpath \
+        'boolean(//dict/key[.="allowCloudKeychainSync"]/following-sibling::*[1][self::false])' \
+        -) || exit $?
+    case "$result" in
+      true) printf '1\n' ;;
+      false) printf '0\n' ;;
+      *) printf 'Unexpected XML parser output\n' >&2; exit 1 ;;
+    esac
+  expected: '1'
+  sudo: true
+  fix: 'Manual action required: Disable iCloud Keychain synchronization manually (System Settings > Apple ID > iCloud > Passwords
+    & Keychain) OR configure an MDM profile.'
+  fix_sudo: false
+  affected_file: MDM Configuration Profile
+  post_action: None. Policy is typically enforced via MDM.
+  security_level: baseline
+  risk_level: high
+  risk_desc: Allowing Passkey synchronization to a personal iCloud account bypasses corporate oversight. If an employee leaves,
+    they retain access to corporate systems via the synced credentials.
+
+---
+
+title: Touch ID for Sudo (Optional)
+os: darwin
+arch:
+- arm64
+labels:
+- auth
+checksuites:
+- id: pam-tid-enabled-check
+  description: Verifies if Touch ID is enabled for sudo via the safe 'sudo_local' configuration.
+  command: grep -c 'auth       sufficient     pam_tid.so' /etc/pam.d/sudo_local 2>/dev/null
+  expected: 1
+  sudo: true
+  fix: |
+    sudo cp /etc/pam.d/sudo_local.template /etc/pam.d/sudo_local && sudo sed -i '' 's/#auth/auth/g' /etc/pam.d/sudo_local
+  fix_sudo: true
+  affected_file: /etc/pam.d/sudo_local
+  post_action: None.
+  security_level: optional
+  risk_level: low
+  risk_desc: Enabling Touch ID is a convenience feature. This method uses the official Apple 'sudo_local' include, which avoids
+    modifying core system files.
+- id: pam-tid-fallback-present-check
+  description: Verifies that the main sudo configuration still contains the password fallback (opendirectory). This should
+    never be modified.
+  command: grep -c 'auth       required       pam_opendirectory.so' /etc/pam.d/sudo
+  expected: 1
+  sudo: true
+  fix: 'Manual verification required: The core /etc/pam.d/sudo file appears modified or corrupted. Restore from backup or
+    macOS Recovery.'
+  fix_sudo: false
+  affected_file: /etc/pam.d/sudo
+  post_action: None.
+  security_level: baseline
+  risk_level: critical
+  risk_desc: If the core sudo file is missing the standard directory authentication, the system may become unmanageable.
+
+---
+
+title: Operating System Updates
+os: darwin
+arch:
+- arm64
+labels:
+- system
+checksuites:
+- id: all-software-up-to-date
+  description: Verifies that no new software updates are currently available, confirming the system is running the latest
+    patched version.
+  command: softwareupdate -l 2>&1 |grep -c 'No new software available.'
+  expected: 1
+  sudo: false
+  fix: sudo softwareupdate --install --all
+  fix_sudo: true
+  affected_file: N/A
+  post_action: Installing updates may require a system reboot and can be disruptive; consider scheduling this fix outside
+    working hours in automated runs.
+  security_level: high
+  risk_level: low
+  risk_desc: The remediation is manual. Automated installation of all updates could cause application or system compatibility
+    issues, but manual execution allows for necessary pre-check procedures.
+- id: automatic-update-check-enabled
+  description: Ensures the system automatically checks for new software updates, providing timely alerts for security patches
+    and new features.
+  command: defaults read /Library/Preferences/com.apple.SoftwareUpdate AutomaticCheckEnabled
+  expected: 1
+  sudo: false
+  fix: sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticCheckEnabled -bool true
+  fix_sudo: true
+  affected_file: /Library/Preferences/com.apple.SoftwareUpdate.plist
+  post_action: The fix is immediate. No manual restart is required.
+  security_level: baseline
+  risk_level: very low
+  risk_desc: The automated fix is a standard 'defaults' write. It is non-disruptive, as it only enables a background check
+    for updates, not the installation.
+- id: automatic-update-download-enabled
+  description: Verifies that updates are automatically downloaded in the background, minimizing the time between release and
+    readiness for installation.
+  command: defaults read /Library/Preferences/com.apple.SoftwareUpdate AutomaticDownload
+  expected: 1
+  sudo: false
+  fix: sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticDownload -bool true
+  fix_sudo: true
+  affected_file: /Library/Preferences/com.apple.SoftwareUpdate.plist
+  post_action: 'The fix is immediate. No manual restart is required. Note: Downloads consume bandwidth and disk space.'
+  security_level: baseline
+  risk_level: very low
+  risk_desc: The automated fix is non-disruptive. The only potential impact is increased network/disk usage, which is generally
+    negligible and standard best practice for security.
+- id: automatic-macos-install-enabled
+  description: Ensures the automatic installation of macOS system updates is enabled, keeping the OS patched and current with
+    minimal user intervention.
+  command: defaults read /Library/Preferences/com.apple.SoftwareUpdate AutomaticallyInstallMacOSUpdates
+  expected: 1
+  sudo: false
+  fix: sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticallyInstallMacOSUpdates -bool true
+  fix_sudo: true
+  affected_file: /Library/Preferences/com.apple.SoftwareUpdate.plist
+  post_action: Enabling this allows the system to perform reboots for major macOS updates automatically, which can disrupt
+    user work. Consider organizational policy.
+  security_level: high
+  risk_level: medium
+  risk_desc: The automated fix can lead to unplanned system reboots to complete major OS updates. This is a significant risk
+    to user work and availability if not managed (e.g., via MDM).
+- id: appstore-auto-update-enabled
+  description: Verifies that automatic updates for App Store applications are enabled, ensuring third-party software patches
+    are applied promptly.
+  command: defaults read /Library/Preferences/com.apple.commerce.plist AutoUpdate
+  expected: 1
+  sudo: false
+  fix: sudo defaults write /Library/Preferences/com.apple.commerce.plist AutoUpdate -bool true
+  fix_sudo: true
+  affected_file: /Library/Preferences/com.apple.commerce.plist
+  post_action: 'The fix is immediate. No manual restart is required. Note: This only applies to apps downloaded via the App
+    Store.'
+  security_level: baseline
+  risk_level: very low
+  risk_desc: The automated fix is non-disruptive. The only risk is minimal interference with application use during a background
+    App Store update.
+- id: critical-update-install-enabled
+  description: Ensures that critical, high-priority security updates are installed automatically, providing the fastest possible
+    defense against zero-day exploits.
+  command: defaults read /Library/Preferences/com.apple.SoftwareUpdate CriticalUpdateInstall
+  expected: 1
+  sudo: false
+  fix: sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate CriticalUpdateInstall -bool true
+  fix_sudo: true
+  affected_file: /Library/Preferences/com.apple.SoftwareUpdate.plist
+  post_action: Critical updates often install immediately without notification and may require a fast, unexpected reboot.
+  security_level: high
+  risk_level: medium
+  risk_desc: The automated fix ensures critical security, but the installation may trigger a necessary system reboot immediately,
+    potentially disrupting user work without warning.
+- id: config-data-install-enabled
+  description: Verifies that configuration data and system data updates (e.g., XProtect, MRT, Gatekeeper) are automatically
+    installed.
+  command: defaults read /Library/Preferences/com.apple.SoftwareUpdate ConfigDataInstall
+  expected: 1
+  sudo: false
+  fix: sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate ConfigDataInstall -bool true
+  fix_sudo: true
+  affected_file: /Library/Preferences/com.apple.SoftwareUpdate.plist
+  post_action: These updates are generally non-disruptive and happen in the background. No manual action required.
+  security_level: baseline
+  risk_level: very low
+  risk_desc: The automated fix is non-disruptive and only enables automatic background updates for security components. Risk
+    is negligible.
+- id: software-update-schedule-frequency
+  description: 'Verifies that the software update check frequency is configured (ScheduleFrequency = 1). VERIFY-27: semantics
+    of the key on macOS 27 still need confirmation.'
+  command: defaults read /Library/Preferences/com.apple.SoftwareUpdate.plist ScheduleFrequency
+  expected: 1
+  sudo: false
+  fix: sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate.plist ScheduleFrequency -int 1
+  fix_sudo: true
+  affected_file: /Library/Preferences/com.apple.SoftwareUpdate.plist
+  post_action: Re-check after reboot. See the VERIFY-27 note in the guide.
+  security_level: baseline
+  risk_level: very low
+  risk_desc: The automated fix is non-disruptive. It only configures a background check schedule, which has minimal performance
+    impact.
+
+---
+
+title: Enable Network Time Synchronization via NTP
+os: darwin
+arch:
+- arm64
+labels:
+- network
+checksuites:
+- id: ntp-server-correctly-configured
+  description: Ensures the Network Time Protocol (NTP) server is correctly set to a trusted, designated server (e.g., time.euro.apple.com)
+    for accurate system time.
+  command: 'systemsetup -getnetworktimeserver |grep -c ''Network Time Server: time.euro.apple.com'''
+  expected: 1
+  sudo: true
+  fix: sudo systemsetup -setnetworktimeserver time.euro.apple.com
+  fix_sudo: true
+  affected_file: N/A
+  post_action: The fix is immediate. Time synchronization is crucial for security protocols (like Kerberos, SSL/TLS certificates).
+  security_level: baseline
+  risk_level: very low
+  risk_desc: The automated fix changes the NTP server to a reliable Apple-provided source. The risk is negligible; the only
+    change is the source of time data.
+- id: ntp-service-enabled
+  description: Verifies that Network Time synchronization is enabled, which ensures the system clock is automatically and
+    accurately maintained.
+  command: 'systemsetup -getusingnetworktime |grep -c ''Network Time: On'''
+  expected: 1
+  sudo: true
+  fix: sudo systemsetup -setusingnetworktime on
+  fix_sudo: true
+  affected_file: N/A
+  post_action: The fix is immediate. Accurate time is essential for log integrity and successful operation of many network
+    security protocols.
+  security_level: baseline
+  risk_level: very low
+  risk_desc: The automated fix enables time synchronization, which is non-disruptive and critical for security. Risk is negligible.
+
+---
+
+title: Time Machine Backups
+os: darwin
+arch:
+- arm64
+labels:
+- filesystem
+checksuites:
+- id: timemachine-do-not-offer-new-disks
+  description: Prevents Time Machine from automatically prompting to use new external disks as backup destinations, maintaining
+    control over backup storage and preventing sensitive data exposure.
+  command: defaults read com.apple.TimeMachine DoNotOfferNewDisksForBackup
+  expected: 1
+  sudo: false
+  fix: defaults write com.apple.TimeMachine DoNotOfferNewDisksForBackup -bool true
+  fix_sudo: false
+  affected_file: /Library/Preferences/com.apple.TimeMachine.plist
+  post_action: This is a per-user setting and takes effect immediately. No manual restart is required.
+  security_level: baseline
+  risk_level: very low
+  risk_desc: The automated fix is a non-disruptive user-specific 'defaults' write. The only impact is preventing the Time
+    Machine prompt on connecting new external drives, which is a minor user experience change.
+- id: timemachine-destination-configured
+  description: Verifies that at least one Time Machine destination is configured, ensuring critical data is backed up regularly.
+  command: tmutil destinationinfo |grep -c 'No destinations configured.'
+  expected: 0
+  sudo: false
+  fix: 'Manual action required: Configure a Time Machine backup destination via System Settings > General > Time Machine.'
+  fix_sudo: false
+  affected_file: N/A
+  post_action: Backup configuration is essential for recovery. Requires user selection of a backup volume and initial backup
+    setup.
+  security_level: baseline
+  risk_level: none
+  risk_desc: The check highlights a missing security control (backup). The remediation is manual and non-disruptive, as it
+    only prompts the user to begin a necessary process.
+- id: timemachine-not-using-network-share
+  description: Ensures Time Machine is NOT using a network backup destination. This is typically preferred for high-security
+    environments where local, encrypted storage is mandated.
+  command: 'tmutil destinationinfo |grep -c ''Kind          : Network'''
+  expected: 0
+  sudo: false
+  fix: 'Manual action required: Ensure Time Machine uses a local, encrypted destination, or enforce encryption on the network
+    share.'
+  fix_sudo: false
+  affected_file: N/A
+  post_action: If a network destination is found, the user must manually remove it or ensure the backup is encrypted. This
+    is organizational policy dependent.
+  security_level: high
+  risk_level: low
+  risk_desc: The check is a warning about a potential policy violation. The manual fix is non-disruptive but may remove a
+    legitimate network backup, requiring a replacement local disk.
+- id: timemachine-network-destination-smb
+  description: Ensures every Time Machine network destination uses SMB. macOS 27 removed the AFP client; Time Machine requires
+    SMB 2 or SMB 3.
+  command: tmutil destinationinfo 2>/dev/null | grep 'URL' | grep -c -v 'smb://'
+  expected: 0
+  sudo: false
+  fix: 'Manual action required: Remove the destination in System Settings > General > Time Machine and add an SMB 2/3 share
+    instead.'
+  fix_sudo: false
+  affected_file: N/A
+  post_action: None.
+  security_level: baseline
+  risk_level: none
+  risk_desc: Check only. AFP destinations do not work on macOS 27 anyway, so a finding means the Mac currently has no working
+    network backup.
+
+---
+
+title: 'Finder: Show All File Extensions'
+os: darwin
+arch:
+- arm64
+labels:
+- system
+checksuites:
+- id: show-all-file-extensions
+  description: Verifies that all file extensions are shown in Finder. This prevents users from being tricked by hidden double
+    extensions (e.g., 'invoice.pdf.exe').
+  command: defaults read NSGlobalDomain AppleShowAllExtensions
+  expected: 1
+  sudo: false
+  fix: defaults write NSGlobalDomain AppleShowAllExtensions -bool true
+  fix_sudo: false
+  affected_file: /Library/Preferences/.GlobalPreferences.plist
+  post_action: The fix is user-specific and takes effect immediately after relaunching the Finder (killall Finder).
+  security_level: baseline
+  risk_level: very low
+  risk_desc: The automated fix is a non-disruptive user-specific 'defaults' write. It improves security with a minor change
+    in file visibility within Finder.
+
+---
+
+title: Disable Creation of Metadata Files
+os: darwin
+arch:
+- arm64
+labels:
+- privacy
+checksuites:
+- id: ds-dont-write-network-stores
+  description: Prevents Finder from writing `.DS_Store` files to network shares. These files can expose metadata, waste space,
+    and violate policies on cross-platform or sensitive shares.
+  command: defaults read com.apple.desktopservices DSDontWriteNetworkStores
+  expected: 1
+  sudo: false
+  fix: defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
+  fix_sudo: false
+  affected_file: /Library/Preferences/com.apple.desktopservices.plist
+  post_action: The fix is user-specific and takes effect immediately after relaunching the Finder (killall Finder).
+  security_level: baseline
+  risk_level: very low
+  risk_desc: The automated fix is a non-disruptive user-specific 'defaults' write. The only impact is the loss of macOS-specific
+    folder view settings on network shares.
+- id: ds-dont-write-usb-stores
+  description: Prevents Finder from writing `.DS_Store` files to USB or external drives. This helps keep these drives clean
+    and avoids exposing metadata when transferring data to other operating systems.
+  command: defaults read com.apple.desktopservices DSDontWriteUSBStores
+  expected: 1
+  sudo: false
+  fix: defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
+  fix_sudo: false
+  affected_file: /Library/Preferences/com.apple.desktopservices.plist
+  post_action: The fix is user-specific and takes effect immediately after relaunching the Finder (killall Finder).
+  security_level: baseline
+  risk_level: very low
+  risk_desc: The automated fix is a non-disruptive user-specific 'defaults' write. The only impact is the loss of macOS-specific
+    folder view settings on connected USB/external drives.
+
+---
+
+title: Enable macOS Firewall
+os: darwin
+arch:
+- arm64
+labels:
+- network
+checksuites:
+- id: application-firewall-enabled
+  description: Ensures the Application Firewall is enabled to control and restrict incoming network connections, protecting
+    against unauthorized access.
+  command: /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate |grep -c 'Firewall is enabled. (State = 1)'
+  expected: 1
+  sudo: false
+  fix: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on
+  fix_sudo: true
+  affected_file: N/A
+  post_action: The fix is immediate. No manual restart is required.
+  security_level: baseline
+  risk_level: low
+  risk_desc: The automated fix is non-disruptive, as it only enables the firewall. If not properly configured, it could block
+    legitimate incoming connections to network services.
+- id: firewall-stealth-mode-enabled
+  description: Verifies Stealth Mode is enabled, which prevents the system from responding to connection attempts from non-approved
+    apps, making the machine less visible on the network.
+  command: /usr/libexec/ApplicationFirewall/socketfilterfw --getstealthmode |grep -c 'Stealth mode enabled'
+  expected: 1
+  sudo: false
+  fix: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setstealthmode on
+  fix_sudo: true
+  affected_file: N/A
+  post_action: 'The fix is immediate. No manual restart is required. Note: This can interfere with some network diagnostic
+    tools.'
+  security_level: high
+  risk_level: low
+  risk_desc: The automated fix is a standard firewall command. Risk is low, but enabling stealth mode can interfere with legitimate
+    network scans or diagnostics that rely on the machine responding to pings/probes.
+- id: firewall-block-all-disabled
+  description: Ensures the 'Block all non-essential incoming connections' setting is DISABLED. Blocking all connections prevents
+    file sharing and other standard services from working.
+  command: /usr/libexec/ApplicationFirewall/socketfilterfw --getblockall |grep -c 'Firewall has block all state set to disabled'
+  expected: 1
+  sudo: false
+  fix: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setblockall off
+  fix_sudo: true
+  affected_file: N/A
+  post_action: Setting to off allows approved apps to accept connections.
+  security_level: baseline
+  risk_level: medium
+  risk_desc: The automated fix changes a core firewall policy. Disabling 'block all' allows configured application rules to
+    function.
+- id: firewall-auto-allow-signed-enabled
+  description: Ensures 'Automatically allow built-in signed software' stays ENABLED (Apple's default). Built-in binaries are
+    already constrained by Gatekeeper, SIP, and code signing; disabling this makes routine macOS system daemons trigger firewall
+    prompts, which mostly trains users to reflexively click Allow rather than improving security. Third-party software is
+    still gated by the 'downloaded software' check below.
+  command: /usr/libexec/ApplicationFirewall/socketfilterfw --getallowsigned |grep -c 'Automatically allow built-in signed
+    software ENABLED'
+  expected: 1
+  sudo: false
+  fix: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsigned on
+  fix_sudo: true
+  affected_file: N/A
+  post_action: Restores the macOS default. For a stricter posture (e.g., an enterprise fleet), set --setallowsigned off instead,
+    at the cost of prompts for built-in macOS services.
+  security_level: baseline
+  risk_level: very low
+  risk_desc: The automated fix restores Apple's default. No meaningful risk; this trades a theoretical prompt-everything posture
+    for practical daily usability without giving up third-party application gating.
+- id: firewall-auto-allow-downloaded-disabled
+  description: Ensures 'Automatically allow downloaded signed software' is DISABLED. This enforces explicit approval for all
+    third-party software, which is the control that actually matters (unknown, third-party listeners rather than Apple's own
+    signed binaries).
+  command: /usr/libexec/ApplicationFirewall/socketfilterfw --getallowsigned |grep -c 'Automatically allow downloaded signed
+    software DISABLED'
+  expected: 1
+  sudo: false
+  fix: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsignedapp off
+  fix_sudo: true
+  affected_file: N/A
+  post_action: Disabling this requires explicit approval for all newly downloaded applications upon first run.
+  security_level: high
+  risk_level: low
+  risk_desc: The automated fix is a standard firewall command. The primary risk is an **increase in user prompts** for network
+    access from newly installed third-party software.
+- id: firewall-logging-enabled
+  description: 'Best-effort, not a hard gate: verifies that Application Firewall logging is enabled. Apple''s macOS Sequoia
+    enterprise release notes state the underlying EnableLogging/LoggingOption keys are deprecated and that firewall logging
+    is increased by default for the socketfilterfw process, i.e. Apple has moved this from an explicit user-facing toggle
+    to a default-on internal behavior. On macOS 26 Tahoe this check may report inconsistently, or the flag may no longer reflect
+    real logging state, since it depends on a mechanism Apple has already deprecated once. Treat a failure here as informational
+    rather than a compliance gap.'
+  command: /usr/libexec/ApplicationFirewall/socketfilterfw --getloggingmode |grep -c 'Log mode is on'
+  expected: 1
+  sudo: false
+  fix: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setloggingmode on
+  fix_sudo: true
+  affected_file: N/A
+  post_action: The fix is immediate where the flag still functions. If the command errors or the state doesn't change, that
+    is consistent with Apple's stated deprecation of this control rather than a fix failure.
+  security_level: optional
+  risk_level: very low
+  risk_desc: The automated fix enables logging where the flag still works. The only risk is a minor increase in disk usage;
+    Apple's default-on logging behavior since Sequoia likely already covers most of what this control was for.
+- id: firewall-log-throttling-enabled
+  description: 'Best-effort, not a hard gate: ensures firewall logging is set to ''throttled''. Subject to the same Sequoia+
+    deprecation of the LoggingOption key noted above; treat a failure here as informational.'
+  command: /usr/libexec/ApplicationFirewall/socketfilterfw --getloggingopt |grep -c 'Log Option is throttled'
+  expected: 1
+  sudo: false
+  fix: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setloggingopt throttled
+  fix_sudo: true
+  affected_file: N/A
+  post_action: The fix is immediate where the flag still functions.
+  security_level: optional
+  risk_level: very low
+  risk_desc: The automated fix is non-disruptive where it still applies. Apple has deprecated the underlying key as of macOS
+    Sequoia, so this is no longer a meaningful compliance gate on its own.
+- id: packet-filter-enabled-check
+  description: Verifies that the lower-level Packet Filter (PF) is enabled.
+  command: 'sudo pfctl -s info 2>/dev/null | grep -c ''Status: Enabled'''
+  expected: 1
+  sudo: true
+  fix: sudo pfctl -e
+  fix_sudo: true
+  affected_file: /etc/pf.conf
+  post_action: Ensure a valid pf.conf is present before enabling.
+  security_level: high
+  risk_level: medium
+  risk_desc: Enabling PF without a configured ruleset (/etc/pf.conf) typically defaults to 'Allow All'.
+
+---
+
+title: Disable Power Nap and Network Wake
+os: darwin
+arch:
+- arm64
+labels:
+- network
+checksuites:
+- id: wake-on-magic-packet-disabled
+  description: Verifies that 'Wake on Magic Packet' (Wake-on-LAN) is disabled. This prevents the system from being remotely
+    awakened unnecessarily, reducing availability to potential attackers.
+  command: pmset -g custom |awk '/womp/ { sum+=$2 } END {print sum}'
+  expected: 0
+  sudo: false
+  fix: sudo pmset -a womp 0
+  fix_sudo: true
+  affected_file: N/A
+  post_action: The fix is immediate. This prevents remote administration tools that rely on Wake-on-LAN from functioning when
+    the computer is sleeping.
+  security_level: baseline
+  risk_level: low
+  risk_desc: The automated fix is a standard power management command. The only risk is blocking legitimate remote management
+    tools that require Wake-on-LAN to function while the system is asleep.
+- id: wake-on-network-access-disabled
+  description: Verifies the 'Wake for network access' setting is globally disabled via the systemsetup utility.
+  command: 'sudo systemsetup getwakeonnetworkaccess |grep -c ''Wake On Network Access: Off'''
+  expected: 1
+  sudo: true
+  fix: sudo systemsetup -setwakeonnetworkaccess off
+  fix_sudo: true
+  affected_file: N/A
+  post_action: The fix is immediate.
+  security_level: baseline
+  risk_level: low
+  risk_desc: This setting allows the computer to be remotely awakened, increasing its availability to potential attackers.
+
+---
+
+title: Disable Handoff & Universal Control
+os: darwin
+arch:
+- arm64
+labels:
+- network
+checksuites:
+- id: handoff-advertising-disabled
+  description: 'Mandatory on managed enterprise endpoints, optional elsewhere: ensures Handoff (Continuity) advertising is
+    disabled, preventing broadcast of device activity to nearby devices signed into the same Apple ID. On a personal device
+    this is a low-value target; on a managed endpoint the signed-in Apple ID may not be under organizational control.'
+  command: defaults -currentHost read com.apple.coreservices.useractivityd ActivityAdvertisingAllowed
+  expected: 0
+  sudo: false
+  fix: defaults -currentHost write com.apple.coreservices.useractivityd ActivityAdvertisingAllowed -bool false
+  fix_sudo: false
+  affected_file: /Library/Preferences/ByHost/com.apple.coreservices.useractivityd.*.plist
+  post_action: The fix is user-specific and takes effect immediately. Disabling this breaks the Handoff/Continuity feature
+    with other Apple devices.
+  security_level: optional
+  risk_level: low
+  risk_desc: The automated fix is a non-disruptive 'defaults' write. The only risk is the **loss of Handoff/Continuity functionality**,
+    which may impact user workflow between Apple devices.
+- id: handoff-receiving-disabled
+  description: 'Mandatory on managed enterprise endpoints, optional elsewhere: ensures Handoff (Continuity) receiving is disabled,
+    preventing the device from accepting activity from nearby devices signed into the same Apple ID.'
+  command: defaults -currentHost read com.apple.coreservices.useractivityd ActivityReceivingAllowed
+  expected: 0
+  sudo: false
+  fix: defaults -currentHost write com.apple.coreservices.useractivityd ActivityReceivingAllowed -bool false
+  fix_sudo: false
+  affected_file: /Library/Preferences/ByHost/com.apple.coreservices.useractivityd.*.plist
+  post_action: The fix is user-specific and takes effect immediately. Disabling this breaks the Handoff/Continuity feature
+    with other Apple devices.
+  security_level: optional
+  risk_level: low
+  risk_desc: The automated fix is a non-disruptive 'defaults' write. The only risk is the **loss of Handoff/Continuity functionality**,
+    which may impact user workflow between Apple devices.
+
+---
+
+title: Restrict AirDrop Discoverability
+os: darwin
+arch:
+- arm64
+labels:
+- network
+checksuites:
+- id: airdrop-discoverability-restricted
+  description: Ensures AirDrop discoverability is not set to 'Everyone'. 'Contacts Only' (or 'Off') removes the realistic
+    threat of unsolicited nearby devices without disabling the feature outright.
+  command: v=$(defaults read com.apple.sharingd DiscoverableMode 2>/dev/null); [ "$v" = Everyone ] && echo 0 || echo 1
+  expected: 1
+  sudo: false
+  fix: defaults write com.apple.sharingd DiscoverableMode -string "Contacts Only"
+  fix_sudo: false
+  affected_file: ~/Library/Preferences/com.apple.sharingd.plist
+  post_action: The fix is user-specific and takes effect immediately for new discovery attempts. AirDrop remains usable with
+    contacts.
+  security_level: baseline
+  risk_level: very low
+  risk_desc: The automated fix is a non-disruptive user-specific 'defaults' write. AirDrop remains fully usable with contacts;
+    the only change is that unknown nearby devices can no longer see or send to this Mac.
+- id: airdrop-daemon-disabled
+  description: 'Optional, stricter control: verifies the AirDrop daemon is disabled entirely, removing the feature rather
+    than just restricting discoverability. Recommended for kiosk-style or server-like systems with no legitimate AirDrop use
+    case, or high-security environments.'
+  command: defaults read com.apple.NetworkBrowser DisableAirDrop
+  expected: 1
+  sudo: false
+  fix: defaults write com.apple.NetworkBrowser DisableAirDrop -bool true
+  fix_sudo: false
+  affected_file: ~/Library/Preferences/com.apple.NetworkBrowser.plist
+  post_action: The fix is user-specific and takes effect after the next login or a Finder restart (killall Finder). This completely
+    removes the ability to use AirDrop.
+  security_level: optional
+  risk_level: low
+  risk_desc: The automated fix is a non-disruptive user-specific 'defaults' write. The only risk is the **loss of the convenient
+    AirDrop file transfer functionality**, which may impact user workflow. Given 'Contacts Only' discoverability already removes
+    the realistic threat, this control trades a working feature for marginal additional risk reduction.
+
+---
+
+title: Disable Network Services & Sharing
+os: darwin
+arch:
+- arm64
+labels:
+- network
+checksuites:
+- id: service-tftp-disabled
+  description: Verifies that the Trivial File Transfer Protocol (TFTP) service is disabled.
+  command: launchctl print-disabled system | grep -c '"com.apple.tftpd" => disabled'
+  expected: 1
+  sudo: false
+  fix: sudo launchctl disable system/com.apple.tftpd
+  fix_sudo: true
+  affected_file: LaunchDaemon configuration
+  post_action: None.
+  security_level: baseline
+  risk_level: low
+  risk_desc: TFTP is an insecure protocol with no authentication. Running it exposes the system to trivial data exfiltration.
+- id: service-nfs-disabled
+  description: Verifies that the Network File System (NFS) daemon is disabled.
+  command: launchctl print-disabled system | grep -c '"com.apple.nfsd" => disabled'
+  expected: 1
+  sudo: false
+  fix: sudo launchctl disable system/com.apple.nfsd
+  fix_sudo: true
+  affected_file: LaunchDaemon configuration
+  post_action: None.
+  security_level: baseline
+  risk_level: low
+  risk_desc: NFS is generally not required for client devices. Disabling it reduces the attack surface.
+- id: service-httpd-disabled
+  description: Verifies that the built-in Apache Web Server (httpd) is disabled.
+  command: launchctl print-disabled system | grep -c '"org.apache.httpd" => disabled'
+  expected: 1
+  sudo: false
+  fix: sudo launchctl disable system/org.apache.httpd
+  fix_sudo: true
+  affected_file: LaunchDaemon configuration
+  post_action: None.
+  security_level: baseline
+  risk_level: low
+  risk_desc: Running a web server on a client endpoint is a security risk. If web hosting is required, it should be done on
+    dedicated servers.
+- id: service-uucp-disabled
+  description: Verifies that the Unix-to-Unix Copy Protocol (UUCP) is disabled.
+  command: launchctl print-disabled system | grep -c '"com.apple.uucp" => disabled'
+  expected: 1
+  sudo: false
+  fix: sudo launchctl disable system/com.apple.uucp
+  fix_sudo: true
+  affected_file: LaunchDaemon configuration
+  post_action: None.
+  security_level: baseline
+  risk_level: low
+  risk_desc: UUCP is a legacy protocol that is effectively obsolete and should be disabled.
+- id: service-ssh-disabled
+  description: Verifies that the SSH Server (Remote Login) is disabled via launchctl.
+  command: launchctl print-disabled system | grep -c '"com.openssh.sshd" => disabled'
+  expected: 1
+  sudo: false
+  fix: sudo launchctl disable system/com.openssh.sshd
+  fix_sudo: true
+  affected_file: LaunchDaemon configuration
+  post_action: This disables Remote Login. Ensure alternate access methods are available if needed.
+  security_level: baseline
+  risk_level: medium
+  risk_desc: SSH (Remote Login) should only be enabled on systems that require remote administration.
+- id: screensharing-disabled
+  description: Ensures the Screen Sharing service is disabled. This minimizes the attack surface by preventing unauthorized
+    remote desktop access.
+  command: if launchctl print-disabled system | grep -q '"com.apple.screensharing" => enabled' || launchctl print system/com.apple.screensharing
+    >/dev/null 2>&1; then echo 1; else echo 0; fi
+  expected: 0
+  sudo: true
+  fix: sudo launchctl disable system/com.apple.screensharing
+  fix_sudo: true
+  affected_file: N/A
+  post_action: 'The fix is immediate. To completely remove the service, an administrator must use the GUI: System Settings
+    > General > Sharing and uncheck Screen Sharing.'
+  security_level: high
+  risk_level: low
+  risk_desc: The automated fix disables a core remote access service. Risk is low, but it will disrupt legitimate remote administration
+    or support relying on Screen Sharing.
+- id: smb-sharing-disabled
+  description: Verifies the Server Message Block (SMB) sharing daemon is disabled. SMB sharing should be disabled unless explicitly
+    required to reduce the attack surface.
+  command: launchctl print-disabled system |grep -c '"com.apple.smbd" => disabled'
+  expected: 1
+  sudo: false
+  fix: sudo launchctl disable system/com.apple.smbd
+  fix_sudo: true
+  affected_file: N/A
+  post_action: The fix is immediate. This will prevent users from sharing files and folders over the network via the SMB protocol.
+  security_level: baseline
+  risk_level: low
+  risk_desc: The automated fix disables the SMB service. If the machine relies on SMB for file sharing (either providing or
+    receiving), this will break that functionality.
+- id: printer-sharing-disabled
+  description: Ensures CUPS (Common Unix Printing System) printer sharing is disabled, preventing the local printer from being
+    shared on the network.
+  command: cupsctl | grep -c '_share_printers=0'
+  expected: 1
+  sudo: false
+  fix: sudo cupsctl _share_printers=0
+  fix_sudo: true
+  affected_file: N/A
+  post_action: The fix is immediate. If the user needs to share a locally attached printer with other network users, this
+    must remain enabled.
+  security_level: baseline
+  risk_level: very low
+  risk_desc: The automated fix disables printer sharing. The only risk is that users will be unable to share a connected local
+    printer with other network clients.
+- id: remote-login-ssh-disabled
+  description: Verifies that Remote Login (SSH) is disabled. This prevents remote command-line access to the system, minimizing
+    the remote attack surface.
+  command: 'systemsetup -getremotelogin | grep -c ''Remote Login: Off'''
+  expected: 1
+  sudo: true
+  fix: sudo systemsetup -setremotelogin off
+  fix_sudo: true
+  affected_file: N/A
+  post_action: The fix is immediate. This will disable SSH access, preventing legitimate remote system administration.
+  security_level: high
+  risk_level: medium
+  risk_desc: The automated fix disables SSH. This is a significant risk to remote administration capabilities. If SSH is required,
+    this control must be exempted.
+- id: remote-desktop-agent-inactive
+  description: Checks that Remote Management (Apple Remote Desktop) is disabled, as reported by mdmclient, and that the ARDAgent
+    is not running.
+  command: if /usr/libexec/mdmclient QuerySecurityInfo 2>/dev/null | grep -q 'RemoteDesktopEnabled = 0' && ! pgrep -q ARDAgent;
+    then echo 1; else echo 0; fi
+  expected: 1
+  sudo: true
+  fix: sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -deactivate -stop
+  fix_sudo: true
+  affected_file: N/A
+  post_action: kickstart -deactivate -stop persistently disables the agent (unlike a plain killall, which the launchd service
+    would just respawn). Re-enabling Remote Management via System Settings will start it again if needed later.
+  security_level: high
+  risk_level: low
+  risk_desc: The check serves as a secondary control. Manually killing the agent will disrupt any active remote management
+    session but is necessary to enforce the policy.
+- id: remote-apple-events-disabled
+  description: Verifies that Remote Apple Events are disabled. This prevents remote execution of scripts and commands, reducing
+    the risk of unauthorized lateral movement.
+  command: 'systemsetup -getremoteappleevents |grep -c ''Remote Apple Events: Off'''
+  expected: 1
+  sudo: true
+  fix: sudo systemsetup -setremoteappleevents off
+  fix_sudo: true
+  affected_file: N/A
+  post_action: The fix is immediate. Disabling this breaks automation and remote application control features that rely on
+    Apple Events.
+  security_level: high
+  risk_level: medium
+  risk_desc: The automated fix disables the Remote Apple Events service. This will break legitimate remote automation and
+    control workflows, which can significantly impact developer/admin tools.
+- id: apple-events-service-disabled
+  description: Checks that the 'com.apple.AEServer' daemon is disabled, which is the underlying service for Remote Apple Events.
+  command: launchctl print-disabled system |grep com.apple.AEServer |grep -c '"com.apple.AEServer" => disabled'
+  expected: 1
+  sudo: false
+  fix: sudo launchctl disable system/com.apple.AEServer
+  fix_sudo: true
+  affected_file: N/A
+  post_action: This service is the daemon for Remote Apple Events. Disabling it is equivalent to the systemsetup command and
+    is immediate.
+  security_level: high
+  risk_level: medium
+  risk_desc: The automated fix disables the Apple Events service. This will break legitimate remote automation and control
+    workflows, which can significantly impact developer/admin tools.
+- id: content-caching-plist-deactivated
+  description: Verifies that Content Caching is deactivated by checking the setting in the configuration file, preventing
+    the machine from acting as a local update server.
+  command: defaults read /Library/Preferences/com.apple.AssetCache.plist |grep -c 'Activated = 0;'
+  expected: 1
+  sudo: false
+  fix: sudo defaults write /Library/Preferences/com.apple.AssetCache.plist Activated -bool false
+  fix_sudo: true
+  affected_file: /Library/Preferences/com.apple.AssetCache.plist
+  post_action: A system reboot or service restart may be required to fully ensure the caching service is not running. The
+    next check confirms the running state.
+  security_level: baseline
+  risk_level: low
+  risk_desc: The automated fix disables content caching. In large environments where this is a dedicated function, disabling
+    it will increase network traffic and slow down software updates for other local machines.
+- id: content-caching-service-deactivated
+  description: Verifies that Content Caching is actively deactivated and not running, based on the AssetCacheManagerUtil status.
+  command: 'AssetCacheManagerUtil isActivated 2>&1 |grep -c ''Content caching is deactivated: (no error)'''
+  expected: 1
+  sudo: false
+  fix: sudo AssetCacheManagerUtil deactivate
+  fix_sudo: true
+  affected_file: N/A
+  post_action: The fix is immediate. If the service is running, this command will shut it down.
+  security_level: baseline
+  risk_level: low
+  risk_desc: The automated fix stops the content caching service. In large environments where this is a dedicated function,
+    stopping it will increase network traffic and slow down software updates for other local machines.
+- id: open-directory-agent-disabled
+  description: Ensures the Open Directory Service (ODSAgent) is not running. This prevents the machine from attempting to
+    bind to an Open Directory server unless explicitly configured.
+  command: launchctl list | grep -c com.apple.ODSAgent
+  expected: 0
+  sudo: true
+  fix: sudo launchctl disable system/com.apple.ODSAgent
+  fix_sudo: true
+  affected_file: N/A
+  post_action: The fix is immediate. If the machine is bound to Active Directory or Open Directory, disabling this agent will
+    break authentication and user access.
+  security_level: high
+  risk_level: high
+  risk_desc: The automated fix disables a core directory service component. This is a **high risk** and will prevent all users
+    from authenticating if the machine is bound to an enterprise directory service (AD/OD).
+- id: home-sharing-disabled
+  description: Verifies that Home Sharing for media (Music/TV/Photos) is disabled. This prevents unauthorized network access
+    to local media libraries.
+  command: defaults read com.apple.amp.mediasharingd home-sharing-enabled
+  expected: 0
+  sudo: false
+  fix: defaults write com.apple.amp.mediasharingd home-sharing-enabled -bool false
+  fix_sudo: false
+  affected_file: /Library/Preferences/com.apple.amp.mediasharingd.plist
+  post_action: The fix is user-specific and takes effect immediately. This will prevent users from accessing their media libraries
+    from other devices on the same home network.
+  security_level: baseline
+  risk_level: low
+  risk_desc: The automated fix is a non-disruptive 'defaults' write. The only risk is the **loss of Home Sharing functionality**,
+    which may impact personal media consumption habits.
+
+---
+
+title: Restrict iCloud Services
+os: darwin
+arch:
+- arm64
+labels:
+- privacy
+checksuites:
+- id: icloud-addressbook-disabled
+  description: 'Enterprise-managed devices: mandatory. Personal devices: optional. Verifies that synchronization of Contacts
+    (Address Book) with iCloud is disallowed via a configuration profile, protecting sensitive contact information from unauthorized
+    cloud storage.'
+  command: profiles -P -o stdout |grep -c 'allowCloudAddressBook = 0;'
+  expected: 1
+  sudo: true
+  fix: 'Manual action required: This setting must be enforced via a Mobile Device Management (MDM) profile or manually in
+    System Settings > Apple ID > iCloud > Contacts (uncheck).'
+  fix_sudo: false
+  affected_file: MDM Configuration Profile
+  post_action: If this is enforced via MDM, no user action is needed. Manual change is user-specific and can be easily reversed.
+  security_level: optional
+  risk_level: none
+  risk_desc: The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption.
+    Note - risk_level here reflects automation safety only, not workflow impact; on a personal device, losing this sync is
+    a real usability cost, which is why this control is optional outside managed fleets. Disabling the sync may break contact
+    availability across other Apple devices.
+- id: icloud-bookmarks-disabled
+  description: 'Enterprise-managed devices: mandatory. Personal devices: optional. Verifies that synchronization of Safari
+    Bookmarks with iCloud is disallowed, ensuring browsing history and saved links remain local and protected.'
+  command: profiles -P -o stdout |grep -c 'allowCloudBookmarks = 0;'
+  expected: 1
+  sudo: true
+  fix: 'Manual action required: This setting must be enforced via an MDM profile or manually in System Settings > Apple ID
+    > iCloud > Safari (uncheck).'
+  fix_sudo: false
+  affected_file: MDM Configuration Profile
+  post_action: If enforced via MDM, no user action is needed. Disabling the sync will break bookmark synchronization across
+    devices.
+  security_level: optional
+  risk_level: none
+  risk_desc: The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption.
+    Note - risk_level here reflects automation safety only, not workflow impact; on a personal device, losing this sync is
+    a real usability cost, which is why this control is optional outside managed fleets. Disabling the sync may break bookmark
+    availability across other Apple devices.
+- id: icloud-calendar-disabled
+  description: 'Enterprise-managed devices: mandatory. Personal devices: optional. Verifies that synchronization of Calendar
+    data with iCloud is disallowed, protecting sensitive scheduling and meeting information from cloud storage.'
+  command: profiles -P -o stdout |grep -c 'allowCloudCalendar = 0;'
+  expected: 1
+  sudo: true
+  fix: 'Manual action required: This setting must be enforced via an MDM profile or manually in System Settings > Apple ID
+    > iCloud > Calendar (uncheck).'
+  fix_sudo: false
+  affected_file: MDM Configuration Profile
+  post_action: If enforced via MDM, no user action is needed. Disabling the sync will break calendar synchronization across
+    devices.
+  security_level: optional
+  risk_level: none
+  risk_desc: The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption.
+    Note - risk_level here reflects automation safety only, not workflow impact; on a personal device, losing this sync is
+    a real usability cost, which is why this control is optional outside managed fleets. Disabling the sync may break calendar
+    availability across other Apple devices.
+- id: icloud-desktop-and-documents-disabled
+  description: 'Enterprise-managed devices: mandatory. Personal devices: optional. Verifies that synchronization of Desktop
+    and Documents folders with iCloud Drive is disallowed. This is a crucial control to ensure sensitive files remain local.'
+  command: profiles -P -o stdout |grep -c 'allowCloudDesktopAndDocuments = 0;'
+  expected: 1
+  sudo: true
+  fix: 'Manual action required: This setting must be enforced via an MDM profile or manually in System Settings > Apple ID
+    > iCloud Drive > Desktop & Documents Folders (uncheck).'
+  fix_sudo: false
+  affected_file: MDM Configuration Profile
+  post_action: If enforced via MDM, no user action is needed. Disabling this may cause files to be moved back to a local folder,
+    which can be disruptive to the user.
+  security_level: optional
+  risk_level: none
+  risk_desc: The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption.
+    Note - risk_level here reflects automation safety only, not workflow impact; on a personal device, losing this sync is
+    a real usability cost, which is why this control is optional outside managed fleets. Disabling this sync is highly disruptive
+    if the user relies on this feature.
+- id: icloud-document-sync-disabled
+  description: 'Enterprise-managed devices: mandatory. Personal devices: optional. Verifies that synchronization of documents
+    and data for third-party apps with iCloud Drive is disallowed, ensuring application-specific data remains local.'
+  command: profiles -P -o stdout |grep -c 'allowCloudDocumentSync = 0;'
+  expected: 1
+  sudo: true
+  fix: 'Manual action required: This setting must be enforced via an MDM profile or manually in System Settings > Apple ID
+    > iCloud Drive > Apps Syncing to iCloud Drive.'
+  fix_sudo: false
+  affected_file: MDM Configuration Profile
+  post_action: If enforced via MDM, no user action is needed. Disabling this will prevent application data synchronization
+    across devices.
+  security_level: optional
+  risk_level: none
+  risk_desc: The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption.
+    Note - risk_level here reflects automation safety only, not workflow impact; on a personal device, losing this sync is
+    a real usability cost, which is why this control is optional outside managed fleets. Disabling this sync will break application
+    data synchronization across devices.
+- id: icloud-keychain-sync-disabled
+  description: 'Mandatory on all devices, personal and managed: verifies that synchronization of the macOS Keychain (passwords
+    and sensitive credentials) with iCloud Keychain is disallowed, keeping credentials strictly local.'
+  command: profiles -P -o stdout |grep -c 'allowCloudKeychainSync = 0;'
+  expected: 1
+  sudo: true
+  fix: 'Manual action required: This setting must be enforced via an MDM profile or manually in System Settings > Apple ID
+    > iCloud > Keychain (uncheck).'
+  fix_sudo: false
+  affected_file: MDM Configuration Profile
+  post_action: If enforced via MDM, no user action is needed. Disabling this is a major security control but prevents automatic
+    password filling on other devices.
+  security_level: high
+  risk_level: none
+  risk_desc: The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption.
+    Disabling this sync breaks password synchronization across devices, which may frustrate users.
+- id: icloud-mail-disabled
+  description: 'Enterprise-managed devices: mandatory. Personal devices: optional. Verifies that synchronization of iCloud
+    Mail with the device is disallowed, ensuring email data is not fetched via an unapproved cloud service.'
+  command: profiles -P -o stdout |grep -c 'allowCloudMail = 0;'
+  expected: 1
+  sudo: true
+  fix: 'Manual action required: This setting must be enforced via an MDM profile or manually in System Settings > Apple ID
+    > iCloud > Mail (uncheck).'
+  fix_sudo: false
+  affected_file: MDM Configuration Profile
+  post_action: If enforced via MDM, no user action is needed. Disabling this will prevent the user from accessing iCloud Mail
+    on the machine.
+  security_level: optional
+  risk_level: none
+  risk_desc: The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption.
+    Note - risk_level here reflects automation safety only, not workflow impact; on a personal device, losing this sync is
+    a real usability cost, which is why this control is optional outside managed fleets. Disabling this sync may prevent the
+    user from accessing a legitimate email service.
+- id: icloud-notes-disabled
+  description: 'Enterprise-managed devices: mandatory. Personal devices: optional. Verifies that synchronization of Notes
+    with iCloud is disallowed, protecting potentially sensitive free-form text data from unauthorized cloud storage.'
+  command: profiles -P -o stdout |grep -c 'allowCloudNotes = 0;'
+  expected: 1
+  sudo: true
+  fix: 'Manual action required: This setting must be enforced via an MDM profile or manually in System Settings > Apple ID
+    > iCloud > Notes (uncheck).'
+  fix_sudo: false
+  affected_file: MDM Configuration Profile
+  post_action: If enforced via MDM, no user action is needed. Disabling the sync will break note synchronization across devices.
+  security_level: optional
+  risk_level: none
+  risk_desc: The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption.
+    Note - risk_level here reflects automation safety only, not workflow impact; on a personal device, losing this sync is
+    a real usability cost, which is why this control is optional outside managed fleets. Disabling this sync may break note
+    availability across other Apple devices.
+- id: icloud-photo-library-disabled
+  description: 'Enterprise-managed devices: mandatory. Personal devices: optional. Verifies that synchronization of the Photo
+    Library with iCloud Photos is disallowed, ensuring image and video data remains local.'
+  command: profiles -P -o stdout |grep -c 'allowCloudPhotoLibrary = 0;'
+  expected: 1
+  sudo: true
+  fix: 'Manual action required: This setting must be enforced via an MDM profile or manually in System Settings > Apple ID
+    > iCloud > Photos (uncheck).'
+  fix_sudo: false
+  affected_file: MDM Configuration Profile
+  post_action: If enforced via MDM, no user action is needed. Disabling the sync will prevent the user from accessing their
+    full cloud photo library.
+  security_level: optional
+  risk_level: none
+  risk_desc: The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption.
+    Note - risk_level here reflects automation safety only, not workflow impact; on a personal device, losing this sync is
+    a real usability cost, which is why this control is optional outside managed fleets. Disabling this sync may break photo
+    synchronization across devices.
+- id: icloud-private-relay-disabled
+  description: 'Mandatory on all devices, personal and managed: verifies that iCloud Private Relay is disallowed. This proxy
+    service can interfere with content filtering, security monitoring, and network forensics.'
+  command: profiles -P -o stdout |grep -c 'allowCloudPrivateRelay = 0;'
+  expected: 1
+  sudo: true
+  fix: 'Manual action required: This setting must be enforced via an MDM profile or manually in System Settings > Apple ID
+    > iCloud > Private Relay (uncheck).'
+  fix_sudo: false
+  affected_file: MDM Configuration Profile
+  post_action: If enforced via MDM, no user action is needed. Disabling this may reduce user privacy, but improves network
+    security compliance.
+  security_level: baseline
+  risk_level: none
+  risk_desc: The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption.
+    Disabling this feature ensures predictable network routing and traffic monitoring.
+- id: icloud-reminders-disabled
+  description: 'Enterprise-managed devices: mandatory. Personal devices: optional. Verifies that synchronization of Reminders
+    with iCloud is disallowed, protecting sensitive task and reminder information from cloud storage.'
+  command: profiles -P -o stdout |grep -c 'allowCloudReminders = 0;'
+  expected: 1
+  sudo: true
+  fix: 'Manual action required: This setting must be enforced via an MDM profile or manually in System Settings > Apple ID
+    > iCloud > Reminders (uncheck).'
+  fix_sudo: false
+  affected_file: MDM Configuration Profile
+  post_action: If enforced via MDM, no user action is needed. Disabling the sync will break reminder synchronization across
+    devices.
+  security_level: optional
+  risk_level: none
+  risk_desc: The check serves as a policy check. The remediation is manual/MDM based, so there is no risk of automated disruption.
+    Note - risk_level here reflects automation safety only, not workflow impact; on a personal device, losing this sync is
+    a real usability cost, which is why this control is optional outside managed fleets. Disabling this sync may break reminder
+    availability across other Apple devices.
+- id: icloud-freeform-disabled
+  description: 'Enterprise-managed devices: mandatory. Personal devices: optional. Verifies that synchronization of the Freeform
+    application data (macOS 13+) with iCloud is disallowed, protecting sensitive collaboration content.'
+  command: profiles -P -o stdout |grep -c 'allowCloudFreeform = 0;'
+  expected: 1
+  sudo: true
+  fix: 'Manual action required: This setting must be enforced via an MDM profile.'
+  fix_sudo: false
+  affected_file: MDM Configuration Profile
+  post_action: If enforced via MDM, no user action is needed. Disabling the sync will prevent Freeform synchronization across
+    devices.
+  security_level: optional
+  risk_level: none
+  risk_desc: The check serves as a policy check. Disabling the sync may break Freeform collaboration across devices.
+
+---
+
+title: Disable Proximity Based Password Sharing
+os: darwin
+arch:
+- arm64
+labels:
+- privacy
+checksuites:
+- id: ecosystem-autounlock-disabled
+  description: Verifies that Apple Watch Auto Unlock is disallowed. This forces the user to authenticate via password or Touch
+    ID at the login screen, enhancing security.
+  command: profiles -P -o stdout |grep -c 'allowAutoUnlock = 0;'
+  expected: 1
+  sudo: true
+  fix: 'Manual action required: This setting must be enforced via an MDM profile.'
+  fix_sudo: false
+  affected_file: MDM Configuration Profile
+  post_action: Disabling this enhances security but removes a major convenience feature.
+  security_level: high
+  risk_level: none
+  risk_desc: The check serves as a policy check. The feature uses Bluetooth proximity as an authentication factor, which is
+    less secure than explicit biometric authentication.
+- id: ecosystem-handoff-disabled
+  description: Verifies that Handoff and Continuity features are disallowed, preventing the unauthorized transfer of session
+    context and data to nearby devices.
+  command: profiles -P -o stdout |grep -c 'allowActivityContinuation = 0;'
+  expected: 1
+  sudo: true
+  fix: 'Manual action required: This setting must be enforced via an MDM profile.'
+  fix_sudo: false
+  affected_file: MDM Configuration Profile
+  post_action: Disabling this prevents the seamless transfer of Safari tabs, documents, and phone calls to other Apple devices.
+  security_level: baseline
+  risk_level: none
+  risk_desc: The check serves as a policy check. Disabling this reduces the potential for session data leakage across the
+    ecosystem.
+
+---
+
+title: Restrict SSH Client Ciphers and Algorithms
+os: darwin
+arch:
+- arm64
+labels:
+- network
+checksuites:
+- id: ssh-client-ciphers-restricted
+  description: Ensures the effective SSH client configuration (ssh -G) offers no CBC, 3DES or RC4 ciphers.
+  command: ssh -G compliance-check.invalid 2>/dev/null | grep '^ciphers ' | grep -cE 'cbc|3des|arcfour'
+  expected: 0
+  sudo: false
+  fix: 'Manual action required: Apply the Host * baseline from the guide to ~/.ssh/config.'
+  fix_sudo: false
+  affected_file: ~/.ssh/config
+  post_action: The fix is immediate.
+  security_level: high
+  risk_level: medium
+  risk_desc: Imposing a restrictive cipher list ensures Forward Secrecy and Authenticated Encryption but may break connectivity
+    with legacy systems.
+- id: ssh-client-macs-restricted
+  description: Ensures the effective SSH client configuration (ssh -G) offers no SHA-1, MD5 or truncated MACs.
+  command: ssh -G compliance-check.invalid 2>/dev/null | grep '^macs ' | grep -cE 'sha1|md5|-96'
+  expected: 0
+  sudo: false
+  fix: 'Manual action required: Apply the Host * baseline from the guide to ~/.ssh/config.'
+  fix_sudo: false
+  affected_file: ~/.ssh/config
+  post_action: The fix is immediate.
+  security_level: high
+  risk_level: medium
+  risk_desc: Restricting MACs to EtM variants requires the server to support these modern standards.
+- id: ssh-client-kexalgorithms-restricted
+  description: Ensures the effective SSH client configuration prefers the hybrid post-quantum key exchange mlkem768x25519-sha256
+    and offers no SHA-1 based key exchange.
+  command: kex=$(ssh -G compliance-check.invalid 2>/dev/null | awk '/^kexalgorithms /{print $2}'); case "$kex" in mlkem768x25519-sha256,*)
+    ;; *) echo 0; exit 0;; esac; echo "$kex" | grep -qE 'sha1' && echo 0 || echo 1
+  expected: 1
+  sudo: false
+  fix: 'Manual action required: Apply the Host * baseline from the guide to ~/.ssh/config.'
+  fix_sudo: false
+  affected_file: ~/.ssh/config
+  post_action: The fix is immediate.
+  security_level: high
+  risk_level: medium
+  risk_desc: Strict KEX lists prioritize quantum-resistance but depend on the server having a reasonably recent OpenSSH version.
+- id: ssh-client-hostkeyalgorithms-restricted
+  description: Ensures the effective SSH client configuration accepts no ssh-rsa (SHA-1) or DSA host key / public key signatures.
+  command: ssh -G compliance-check.invalid 2>/dev/null | grep -E '^(hostkeyalgorithms|pubkeyacceptedalgorithms) ' | awk '{print
+    $2}' | tr ',' '\n' | grep -cE '^ssh-rsa$|^ssh-rsa-cert|ssh-dss'
+  expected: 0
+  sudo: false
+  fix: 'Manual action required: Apply the Host * baseline from the guide to ~/.ssh/config.'
+  fix_sudo: false
+  affected_file: ~/.ssh/config
+  post_action: The fix is immediate.
+  security_level: high
+  risk_level: medium
+  risk_desc: Removing ssh-rsa (SHA-1) is critical for security but will break connections to very old servers that haven't
+    been updated since ~2020.
+
+---
+
+title: Privacy, Permissions & Location Services
+os: darwin
+arch:
+- arm64
+labels:
+- privacy
+checksuites:
+- id: system-location-services-disabled
+  description: 'Verifies that all system-wide Location Services are disabled. Note: This breaks ''Find My'' and automatic
+    Time Zone.'
+  command: sudo find /private/var/db/locationd/Library/Preferences/ByHost -name 'com.apple.locationd.*.plist' -exec defaults
+    read {} LocationServicesEnabled \; 2>/dev/null | grep -c 1
+  expected: 0
+  sudo: true
+  fix: 'Manual action required: Disable Location Services via System Settings -> Privacy & Security -> Location Services.'
+  fix_sudo: false
+  affected_file: /private/var/db/locationd/Library/Preferences/ByHost/com.apple.locationd.UUID.plist
+  post_action: Verify that critical business apps do not rely on location services.
+  security_level: optional
+  risk_level: high
+  risk_desc: Disabling system-wide Location Services minimizes the risk of physical tracking but breaks features like 'Find
+    My Mac', automatic time zones, and location-based Wi-Fi features.
+- id: analytics-share-mac-analytics-disabled
+  description: Verifies that 'Share Mac Analytics' is disabled to prevent diagnostic data submission to Apple.
+  command: defaults read /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory AutoSubmit 2>/dev/null | grep
+    -c 0
+  expected: 1
+  sudo: false
+  fix: 'Manual action required: Disable "Share Mac Analytics" in System Settings -> Privacy & Security -> Analytics & Improvements.'
+  fix_sudo: false
+  affected_file: /Library/Application Support/CrashReporter/DiagnosticMessagesHistory.plist
+  post_action: None.
+  security_level: baseline
+  risk_level: low
+  risk_desc: Sharing analytics exposes system usage patterns and potentially incidental user data to Apple.
+
+---
+
+title: Post-Quantum Cryptography (PQC)
+os: darwin
+arch:
+- arm64
+labels:
+- network
+checksuites:
+- id: pqc-fallback-disallowed-check
+  description: Ensures the PQC TLS fallback compatibility mode (AllowPQTLSFallback) is not enabled. The key must be absent
+    or 0.
+  command: v=$(defaults read com.apple.network.tls AllowPQTLSFallback 2>/dev/null); [ "$v" = 1 ] && echo 0 || echo 1
+  expected: 1
+  sudo: false
+  fix: defaults delete com.apple.network.tls AllowPQTLSFallback
+  fix_sudo: false
+  affected_file: ~/Library/Preferences/com.apple.network.tls.plist
+  post_action: Restart applications using network-related services.
+  security_level: high
+  risk_level: medium
+  risk_desc: Disabling the fallback ensures PQC is always attempted. Connection failures may occur with legacy servers that
+    incorrectly handle larger ClientHello messages.
+
+---
+
+title: Apple Intelligence & Siri
+os: darwin
+arch:
+- arm64
+labels:
+- ai
+checksuites:
+- id: siri-disabled-check
+  description: 'Mandatory on company systems handling regulated/sensitive data, optional elsewhere: Siri and Siri AI are disabled
+    via Screen Time > Content & Privacy > Siri (Don''t Allow Siri). VERIFY-27: the preference keys behind this setting are
+    not yet confirmed, so this is a manual check.'
+  command: 'Manual action required: Verify System Settings > Screen Time > Content & Privacy > Siri is set to ''Don''t Allow
+    Siri'' (or ''Siri Classic'' with all capabilities off).'
+  expected: 1
+  sudo: false
+  fix: 'Manual action required: Set System Settings > Screen Time > Content & Privacy > Siri to ''Don''t Allow Siri''.'
+  fix_sudo: false
+  affected_file: N/A
+  post_action: Protect Screen Time with a passcode.
+  security_level: optional
+  risk_level: medium
+  risk_desc: Siri AI processes voice, screen and personal context; requests beyond on-device capability go to Private Cloud
+    Compute.
+- id: ai-generative-features-disabled-check
+  description: 'Mandatory on company systems handling regulated/sensitive data, optional elsewhere: Writing Assistance and
+    Image Creation are turned off in Screen Time > Content & Privacy > Siri, and the per-app summary features listed in the
+    guide are off.'
+  command: 'Manual action required: Verify Writing Assistance and Image Creation are off in Screen Time > Content & Privacy
+    > Siri and the per-app settings listed in the guide.'
+  expected: 1
+  sudo: false
+  fix: 'Manual action required: Turn off the features as described in the guide section "Apple Intelligence & Siri".'
+  fix_sudo: false
+  affected_file: N/A
+  post_action: None.
+  security_level: optional
+  risk_level: medium
+  risk_desc: Generative features can send selected content to Private Cloud Compute.
+- id: ai-restrictions-profile-check
+  description: 'Managed endpoints: Writing Tools, Image Playground and external intelligence integrations are disallowed by
+    an installed configuration profile.'
+  command: profiles -P -o stdout 2>/dev/null | grep -cE 'allow(WritingTools|ImagePlayground|ExternalIntelligenceIntegrations)
+    = 0;'
+  expected: 3
+  sudo: true
+  fix: 'Manual action required: Deploy the restrictions via device management.'
+  fix_sudo: false
+  affected_file: MDM Configuration Profile
+  post_action: None.
+  security_level: optional
+  risk_level: none
+  risk_desc: Check only.
+
+---
+
+title: XProtect & Malware Remediation
+os: darwin
+arch:
+- arm64
+labels:
+- system
+checksuites:
+- id: xprotect-version-reported
+  description: XProtect reports an installed signature version via the xprotect tool.
+  command: 'xprotect version 2>/dev/null | grep -c ''^Version: [0-9]'''
+  expected: 1
+  sudo: false
+  requires_command: xprotect
+  fix: sudo xprotect update
+  fix_sudo: true
+  affected_file: N/A
+  post_action: None.
+  security_level: baseline
+  risk_level: very low
+  risk_desc: Installs Apple-signed XProtect updates.
+
+---
+
+title: Software Management and Third-Party Sources
+os: darwin
+arch:
+- arm64
+labels:
+- system
+checksuites:
+- id: secure-homebrew-configuration
+  description: Verifies that Homebrew analytics are disabled to prevent data leakage regarding installed software.
+  command: brew analytics state 2>/dev/null | grep -c 'analytics are disabled'
+  expected: 1
+  sudo: false
+  fix: brew analytics off
+  fix_sudo: false
+  affected_file: Homebrew Configuration
+  post_action: None.
+  security_level: baseline
+  risk_level: low
+  risk_desc: Disabling analytics prevents Homebrew from sending usage data to its developers. This is a privacy enhancement
+    with no functional impact.
+  requires_command: brew
+- id: homebrew-insecure-redirects-check
+  description: Checks that Homebrew forbids HTTPS-to-HTTP redirects via HOMEBREW_NO_INSECURE_REDIRECT in brew.env (read by
+    brew regardless of the shell).
+  command: cat "$HOME/.homebrew/brew.env" /etc/homebrew/brew.env 2>/dev/null | grep -cE '^(export )?HOMEBREW_NO_INSECURE_REDIRECT=1$'
+  expected: 1
+  sudo: false
+  fix: mkdir -p "$HOME/.homebrew" && echo 'HOMEBREW_NO_INSECURE_REDIRECT=1' >> "$HOME/.homebrew/brew.env"
+  fix_sudo: false
+  affected_file: ~/.homebrew/brew.env
+  post_action: None. brew reads brew.env on every invocation.
+  security_level: baseline
+  risk_level: moderate
+  risk_desc: Without this variable, Homebrew might fallback to insecure HTTP mirrors if HTTPS fails, exposing the download
+    to MITM attacks.
+  requires_command: brew
+  expected_op: '>='
+
+---
+
+title: Rosetta and Intel Binaries
+os: darwin
+arch:
+- arm64
+labels:
+- system
+checksuites:
+- id: rosetta-not-installed
+  description: Rosetta is deprecated in macOS 27 and SHOULD NOT be installed unless a business-required Intel application
+    needs it.
+  command: if pgrep -q oahd || [ -e /Library/Apple/usr/libexec/oah ]; then echo 1; else echo 0; fi
+  expected: 0
+  sudo: false
+  fix: 'Manual action required: Rosetta cannot be removed without reinstalling macOS. Replace Intel-only applications with
+    native versions.'
+  fix_sudo: false
+  affected_file: N/A
+  post_action: None.
+  security_level: medium
+  risk_level: none
+  risk_desc: Check only.
+
+---
+
+title: ERNW Public Key Infrastructure (PKI)
+os: darwin
+arch:
+- arm64
+labels:
+- auth
+checksuites:
+- id: ernw-ecdsa-root-ca-installed
+  description: Verifies that the 'ERNW ECDSA Root CA X1' certificate is installed and trusted in the system keychain. This
+    is necessary for secure communication with enterprise services using certificates signed by this root.
+  command: security find-certificate -c 'ERNW ECDSA Root CA X1' -Z -p |grep -c 'BEGIN CERTIFICATE'
+  expected: 1
+  sudo: false
+  fix: 'Manual action required: Install the ''ERNW ECDSA Root CA X1'' certificate into the System keychain via Keychain Access
+    or MDM profile.'
+  fix_sudo: true
+  affected_file: /Library/Keychains/System.keychain-db
+  post_action: The certificate must be obtained from the organization’s distribution point. Installation requires administrative
+    privileges.
+  security_level: baseline
+  risk_level: low
+  risk_desc: The remediation is manual/MDM based, so there is no risk of automated breakage. Failure to install the required
+    root certificate will **break secure access (TLS/SSL) to all internal systems** relying on this CA.
+- id: ernw-rsa-root-ca-installed
+  description: Verifies that the 'ERNW RSA Root CA X2' certificate is installed and trusted in the system keychain. This is
+    necessary for secure communication with enterprise services using certificates signed by this root.
+  command: security find-certificate -c 'ERNW RSA Root CA X2' -Z -p |grep -c 'BEGIN CERTIFICATE'
+  expected: 1
+  sudo: false
+  fix: 'Manual action required: Install the ''ERNW RSA Root CA X2'' certificate into the System keychain via Keychain Access
+    or MDM profile.'
+  fix_sudo: true
+  affected_file: /Library/Keychains/System.keychain-db
+  post_action: The certificate must be obtained from the organization’s distribution point. Installation requires administrative
+    privileges.
+  security_level: baseline
+  risk_level: low
+  risk_desc: The remediation is manual/MDM based, so there is no risk of automated breakage. Failure to install the required
+    root certificate will **break secure access (TLS/SSL) to all internal systems** relying on this CA.

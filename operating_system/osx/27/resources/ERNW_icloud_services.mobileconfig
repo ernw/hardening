@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>PayloadContent</key>
+	<array>
+		<dict>
+			<key>PayloadEnabled</key>
+			<true/>
+			<key>PayloadIdentifier</key>
+			<string>C776CA6D-C974-4CD0-8DF3-93E078C4A800</string>
+			<key>PayloadType</key>
+			<string>com.apple.applicationaccess</string>
+			<key>PayloadUUID</key>
+			<string>C776CA6D-C974-4CD0-8DF3-93E078C4A800</string>
+			<key>PayloadVersion</key>
+			<integer>1</integer>
+			<key>allowCloudAddressBook</key>
+			<false/>
+			<key>allowCloudCalendar</key>
+			<false/>
+			<key>allowCloudBookmarks</key>
+			<false/>
+			<key>allowCloudDocumentSync</key>
+			<false/>
+			<key>allowCloudKeychainSync</key>
+			<false/>
+			<key>allowCloudMail</key>
+			<false/>
+			<key>allowCloudNotes</key>
+			<false/>
+			<key>allowCloudPhotoLibrary</key>
+			<false/>
+			<key>allowCloudPrivateRelay</key>
+			<false/>
+			<key>allowCloudReminders</key>
+			<false/>
+			<key>allowCloudDesktopAndDocuments</key>
+			<false/>
+            <key>allowCloudFreeform</key>
+            <false/>
+		</dict>
+	</array>
+	<key>PayloadDescription</key>
+	<string>Configuration settings for the com.apple.applicationaccess preference domain to disable iCloud functionality of macOS applications.</string>
+	<key>PayloadDisplayName</key>
+	<string>macOS 27 Golden Gate Hardening Cloud Applications</string>
+	<key>PayloadIdentifier</key>
+	<string>macOS 27 Golden Gate Hardening Cloud Applications</string>
+	<key>PayloadOrganization</key>
+	<string>ERNW Enno Rey Netzwerke GmbH</string>
+	<key>PayloadScope</key>
+	<string>System</string>
+	<key>PayloadType</key>
+	<string>Configuration</string>
+	<key>PayloadUUID</key>
+	<string>D9D70563-1C0F-4583-B1C7-CA0E917DB471</string>
+	<key>PayloadVersion</key>
+	<integer>1</integer>
+</dict>
+</plist>
